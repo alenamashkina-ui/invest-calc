@@ -6,17 +6,17 @@ export const constants = {
   mortgageTermYears: 30,
   cycleYears: 5,
   cyclesCount: 3,
-  commissionPercent: 0.03,
+  commissionPercent: 0.035,
   rateFamily: 0.06,
   rateStandardFirst: 0.15,
   rateNextCycles: 0.09,
   marketGrowth: 10,
   basePropertyGrowth: 0.05,
-  inflation: 5,
+  inflation: 6,
   taxRate: 0.13,
   taxFreeYears: 5,
   conservativeYield: 0.05,
-  alternativeYieldPercent: 10
+  alternativeYieldPercent: 13
 };
 
 export const showcaseLots = [
