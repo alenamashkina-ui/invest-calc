@@ -195,62 +195,134 @@ export default function App() {
     const milestones = [];
 
     for (let cycle = 0; cycle < constants.cyclesCount; cycle++) {
-      let currentRate = cycle === 0 
-        ? (isFamilyMortgage ? constants.rateFamily : constants.rateStandardFirst) 
-        : constants.rateNextCycles;
-        
       const currentMortgageTermYears = 30 - (cycle * 5);
-      const monthlyRate = currentRate / 12;
       const totalMonths = currentMortgageTermYears * 12;
-      const annuityFactor = (monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
-
-      let actualDownPayment = 0, loanAmount = 0, propertyPrice = 0, unusedCapital = 0;
+      
+      let cycleProperties = [];
+      let cycleUnusedCapital = 0;
 
       if (cycle === 0) {
-        const maxLoanByPayment = isAutoPayment ? Infinity : (safePaymentLimit / annuityFactor);
-        const maxPriceByPayment = isAutoPayment ? Infinity : (maxLoanByPayment / (1 - constants.downPaymentPercent));
-        const maxPriceByProgram = isFamilyMortgage ? 15000000 : Infinity;
-        const maxPriceByCapital = currentCapital / constants.downPaymentPercent;
-        
-        propertyPrice = Math.min(maxPriceByCapital, maxPriceByProgram, maxPriceByPayment);
-        actualDownPayment = propertyPrice * constants.downPaymentPercent;
-        loanAmount = propertyPrice - actualDownPayment;
-        unusedCapital = currentCapital - actualDownPayment;
+        let remainingCapital = currentCapital;
+        let remainingPaymentLimit = isAutoPayment ? Infinity : safePaymentLimit;
+
+        // 1. Попытка купить по Семейной ипотеке
+        if (isFamilyMortgage) {
+          const familyRate = (constants.rateFamily / 100) / 12;
+          const annuityFamily = (familyRate * Math.pow(1 + familyRate, totalMonths)) / (Math.pow(1 + familyRate, totalMonths) - 1);
+
+          const maxLoanByCap = (remainingCapital / constants.downPaymentPercent) * (1 - constants.downPaymentPercent);
+          const maxLoanByProgram = 12000000;
+          const maxLoanByPayment = remainingPaymentLimit / annuityFamily;
+
+          const familyLoan = Math.min(maxLoanByCap, maxLoanByProgram, maxLoanByPayment);
+          
+          if (familyLoan > 0) {
+            const familyPrice = familyLoan / (1 - constants.downPaymentPercent);
+            const familyDP = familyPrice * constants.downPaymentPercent;
+            const familyPayment = familyLoan * annuityFamily;
+
+            cycleProperties.push({
+              price: familyPrice,
+              loan: familyLoan,
+              rate: familyRate,
+              payment: familyPayment
+            });
+
+            remainingCapital -= familyDP;
+            remainingPaymentLimit -= familyPayment;
+          }
+        }
+
+        // 2. Если остались деньги и лимит платежа — докупаем по Стандартной ставке (ПВ строго 20%)
+        if (remainingCapital > 0 && remainingPaymentLimit > 0) {
+          const standardRate = (constants.rateStandardFirst / 100) / 12;
+          const annuityStandard = (standardRate * Math.pow(1 + standardRate, totalMonths)) / (Math.pow(1 + standardRate, totalMonths) - 1);
+
+          const maxLoanByCap = (remainingCapital / constants.downPaymentPercent) * (1 - constants.downPaymentPercent);
+          const maxLoanByPayment = remainingPaymentLimit / annuityStandard;
+
+          const standardLoan = Math.min(maxLoanByCap, maxLoanByPayment);
+
+          if (standardLoan > 0) {
+            const standardPrice = standardLoan / (1 - constants.downPaymentPercent);
+            const standardDP = standardPrice * constants.downPaymentPercent;
+            const standardPayment = standardLoan * annuityStandard;
+
+            cycleProperties.push({
+              price: standardPrice,
+              loan: standardLoan,
+              rate: standardRate,
+              payment: standardPayment
+            });
+
+            remainingCapital -= standardDP;
+          }
+        }
+
+        // Если платеж ограничил покупки, остаток капитала лежит без дела
+        cycleUnusedCapital = Math.max(0, remainingCapital);
+
       } else {
-        propertyPrice = currentCapital / constants.downPaymentPercent;
-        actualDownPayment = currentCapital;
-        loanAmount = propertyPrice - actualDownPayment;
-        unusedCapital = 0;
+        // В следующих циклах реинвестируем весь капитал (моделируем как единый объем денег для простоты)
+        const nextRate = (constants.rateNextCycles / 100) / 12;
+        const annuityNext = (nextRate * Math.pow(1 + nextRate, totalMonths)) / (Math.pow(1 + nextRate, totalMonths) - 1);
+
+        const price = currentCapital / constants.downPaymentPercent;
+        const dp = currentCapital;
+        const loan = price - dp;
+        const payment = loan * annuityNext;
+
+        cycleProperties.push({
+          price: price,
+          loan: loan,
+          rate: nextRate,
+          payment: payment
+        });
+
+        cycleUnusedCapital = 0;
       }
 
-      const cycleMonthlyPayment = loanAmount * annuityFactor;
+      let cycleMonthlyPayment = cycleProperties.reduce((sum, p) => sum + p.payment, 0);
 
       for (let year = 1; year <= constants.cycleYears; year++) {
         const globalYear = cycle * constants.cycleYears + year;
         const monthsPassed = year * 12;
-        const currentPropertyValue = propertyPrice * Math.pow(1 + constants.marketGrowth / 100, year);
-        const remainingLoan = loanAmount * (Math.pow(1 + monthlyRate, totalMonths) - Math.pow(1 + monthlyRate, monthsPassed)) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
-        const commissionAmount = currentPropertyValue * constants.commissionPercent;
+
+        let totalPropertyValue = 0;
+        let totalLoanBalance = 0;
+        let totalCommission = 0;
+        let initialTotalPropertyValue = 0;
+
+        cycleProperties.forEach(prop => {
+          const currentPropertyValue = prop.price * Math.pow(1 + constants.marketGrowth / 100, year);
+          const remainingLoan = prop.loan * (Math.pow(1 + prop.rate, totalMonths) - Math.pow(1 + prop.rate, monthsPassed)) / (Math.pow(1 + prop.rate, totalMonths) - 1);
+          const commissionAmount = currentPropertyValue * constants.commissionPercent;
+
+          totalPropertyValue += currentPropertyValue;
+          totalLoanBalance += remainingLoan;
+          totalCommission += commissionAmount;
+          initialTotalPropertyValue += prop.price;
+        });
         
-        let netCapital = currentPropertyValue - commissionAmount - remainingLoan + unusedCapital;
+        let netCapital = totalPropertyValue - totalCommission - totalLoanBalance + cycleUnusedCapital;
         let realCapital = netCapital / Math.pow(1 + constants.inflation / 100, globalYear);
 
         yearlyData.push({
           year: globalYear,
           nominalCapital: Math.round(netCapital),
           realCapital: Math.round(realCapital),
-          propertyValue: Math.round(currentPropertyValue),
-          loanBalance: Math.round(remainingLoan)
+          propertyValue: Math.round(totalPropertyValue),
+          loanBalance: Math.round(totalLoanBalance)
         });
 
         if (year === constants.cycleYears) {
           currentCapital = netCapital;
           milestones.push({
             year: globalYear,
-            initialPropertyValue: Math.round(propertyPrice),
-            propertyValue: Math.round(currentPropertyValue),
-            loanBalance: Math.round(remainingLoan),
-            commission: Math.round(commissionAmount),
+            initialPropertyValue: Math.round(initialTotalPropertyValue),
+            propertyValue: Math.round(totalPropertyValue),
+            loanBalance: Math.round(totalLoanBalance),
+            commission: Math.round(totalCommission),
             netCapital: Math.round(netCapital),
             realCapital: Math.round(realCapital),
             monthlyPayment: Math.round(cycleMonthlyPayment)
@@ -410,7 +482,6 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
-  // Возвращаем самую надежную стандартную печать
   const handlePrint = () => {
     window.print();
   };
@@ -440,7 +511,6 @@ export default function App() {
           animation: urgentPulse 1.5s infinite;
         }
 
-        /* Идеальные настройки для сохранения PDF через браузер */
         @media print {
           @page { margin: 1.5cm; size: A4 portrait; }
           body, .min-h-screen { 
@@ -448,10 +518,7 @@ export default function App() {
             -webkit-print-color-adjust: exact !important; 
             print-color-adjust: exact !important; 
           }
-          /* Прячем все кнопки и лишние элементы при печати */
           .no-print { display: none !important; }
-          
-          /* Блокируем разрыв элементов между страницами */
           .print-break-inside-avoid { 
             page-break-inside: avoid; 
             break-inside: avoid; 
@@ -459,7 +526,6 @@ export default function App() {
         }
       `}</style>
 
-      {/* Этот хитрый блок появится ТОЛЬКО на распечатанном PDF в самом низу каждой страницы */}
       <div className="hidden print:flex fixed bottom-0 left-0 w-full justify-between items-center py-2 text-[#a0a0a0] text-[10px] z-50 bg-white border-t border-[#e5e5e5]">
         <span>Диагностика активов и план роста капитала</span>
         <span className="font-tenor text-sm text-[#222222]">Надо брать</span>
@@ -918,7 +984,7 @@ export default function App() {
                     <p className="text-xs text-white/70 mt-3 font-light leading-relaxed">
                       Это сумма, которую вы получите при продаже всех активов с учетом:
                       <br/>– налога 13% (если срок владения менее 5 лет)
-                      <br/>– комиссии при продаже (в среднем 3%)
+                      <br/>– комиссии при продаже (в среднем 3.5%)
                       <br/>– погашения остатка по ипотеке
                     </p>
                   </div>
@@ -926,7 +992,7 @@ export default function App() {
                     <p className="text-sm text-white/80 mb-2 font-light">Капитал, который можно усилить</p>
                     <p className="text-4xl md:text-5xl font-tenor tracking-tight text-[#f5e6e0]">{formatMoney(auditResults.inefficientCapital)}</p>
                     <p className="text-xs text-white/70 mt-3 font-light leading-relaxed">
-                      Часть средств, которые сейчас работают ниже целевой доходности 10% и могут быть направлены в более эффективные инструменты.
+                      Часть средств, которые сейчас работают ниже целевой доходности 13% и могут быть направлены в более эффективные инструменты.
                     </p>
                     <div className="mt-4 pt-4 border-t border-white/10">
                        <p className="text-xs text-white/80 mb-1 font-light">Потенциал роста за 15 лет</p>
@@ -1056,7 +1122,18 @@ export default function App() {
         </div>
       </div>
       
-      <LeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <LeadModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        auditData={{
+          startCapital: auditResults.totalPotentialCapital,
+          inefficientCapital: auditResults.inefficientCapital,
+          desiredIncome: desiredPassiveIncome,
+          progressA: currentProgress,
+          progressB: activeProgress,
+          lostProfit: lostProfit
+        }}
+      />
 
     </div>
   );
