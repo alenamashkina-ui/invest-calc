@@ -29,6 +29,7 @@ export default function App() {
       loanBalance: 3500000,
       mortgagePayment: 32000,
       mortgageRate: 10,
+      isUnderConstruction: false,
       isRented: true,
       rentIncome: 30000,
       isEditing: false
@@ -45,6 +46,7 @@ export default function App() {
       loanBalance: 4800000,
       mortgagePayment: 38000,
       mortgageRate: 10,
+      isUnderConstruction: false,
       isRented: false,
       rentIncome: 0,
       isEditing: false
@@ -91,7 +93,7 @@ export default function App() {
     totalPotentialCapital += cashNum;
 
     reData.forEach(({ item, yearsOwned, equity }) => {
-      const netMonthlyRent = (item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
+      const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
       const roe = equity > 0 ? ((netMonthlyRent * 12) / equity) * 100 : 0;
       
       let cagr = 0;
@@ -101,7 +103,9 @@ export default function App() {
       
       const totalNominalYield = cagr + roe;
       const realTotalYield = totalNominalYield - constants.inflation;
-      const audit = getRealEstateAudit(yearsOwned, cagr, realTotalYield, roe);
+      
+      // Передаем статус стройки и аренды в аудит
+      const audit = getRealEstateAudit(yearsOwned, cagr, realTotalYield, roe, item.isUnderConstruction, item.isRented);
 
       if (audit.level === 'red' || audit.level === 'orange') {
         inefficientCapital += equity;
@@ -205,7 +209,6 @@ export default function App() {
         let remainingCapital = currentCapital;
         let remainingPaymentLimit = isAutoPayment ? Infinity : safePaymentLimit;
 
-        // 1. Попытка купить по Семейной ипотеке
         if (isFamilyMortgage) {
           const familyRate = (constants.rateFamily / 100) / 12;
           const annuityFamily = (familyRate * Math.pow(1 + familyRate, totalMonths)) / (Math.pow(1 + familyRate, totalMonths) - 1);
@@ -233,7 +236,6 @@ export default function App() {
           }
         }
 
-        // 2. Если остались деньги и лимит платежа — докупаем по Стандартной ставке (ПВ строго 20%)
         if (remainingCapital > 0 && remainingPaymentLimit > 0) {
           const standardRate = (constants.rateStandardFirst / 100) / 12;
           const annuityStandard = (standardRate * Math.pow(1 + standardRate, totalMonths)) / (Math.pow(1 + standardRate, totalMonths) - 1);
@@ -259,11 +261,9 @@ export default function App() {
           }
         }
 
-        // Если платеж ограничил покупки, остаток капитала лежит без дела
         cycleUnusedCapital = Math.max(0, remainingCapital);
 
       } else {
-        // В следующих циклах реинвестируем весь капитал (моделируем как единый объем денег для простоты)
         const nextRate = (constants.rateNextCycles / 100) / 12;
         const annuityNext = (nextRate * Math.pow(1 + nextRate, totalMonths)) / (Math.pow(1 + nextRate, totalMonths) - 1);
 
@@ -346,7 +346,7 @@ export default function App() {
       const futureValue = item.currentValue * Math.pow(1 + constants.basePropertyGrowth, 15);
       const remainingDebt = item.hasMortgage ? getRemainingBalance(item.loanBalance, item.mortgageRate || 0, item.mortgagePayment || 0, 15 * 12) : 0;
       const futureCommission = futureValue * constants.commissionPercent;
-      const netMonthlyRent = (item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
+      const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
       const accumulatedRent = netMonthlyRent * 12 * 15;
       nominal += futureValue - remainingDebt - futureCommission + accumulatedRent;
     });
@@ -373,7 +373,7 @@ export default function App() {
         const futureValue = item.currentValue * Math.pow(1 + constants.basePropertyGrowth, year);
         const remainingDebt = item.hasMortgage ? getRemainingBalance(item.loanBalance, item.mortgageRate || 0, item.mortgagePayment || 0, year * 12) : 0;
         const futureCommission = futureValue * constants.commissionPercent;
-        const netMonthlyRent = (item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
+        const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
         const accumulatedRent = netMonthlyRent * 12 * year;
         nominal += futureValue - remainingDebt - futureCommission + accumulatedRent;
       });
@@ -409,7 +409,7 @@ export default function App() {
     setRealEstate(prev => [{
       id: Date.now(), type: '', city: '', purchaseYear: CURRENT_YEAR, purchasePrice: 0, currentValue: 0,
       hasMortgage: false, initialPayment: 0, loanBalance: 0, mortgagePayment: 0, mortgageRate: 0,
-      isRented: false, rentIncome: 0, isEditing: true
+      isUnderConstruction: false, isRented: false, rentIncome: 0, isEditing: true
     }, ...prev]);
   };
 
@@ -604,7 +604,7 @@ export default function App() {
 
                   const activeLoanBalance = item.hasMortgage ? (item.loanBalance || 0) : 0;
                   const equity = item.currentValue - activeLoanBalance - commission - tax;
-                  const netMonthlyRent = (item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
+                  const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
                   const roe = equity > 0 ? ((netMonthlyRent * 12) / equity) * 100 : 0;
                   
                   let cagr = 0;
@@ -615,7 +615,7 @@ export default function App() {
                   
                   const totalNominalYield = cagr + roe;
                   const realTotalYield = totalNominalYield - constants.inflation;
-                  const audit = getRealEstateAudit(yearsOwned, cagr, realTotalYield, roe);
+                  const audit = getRealEstateAudit(yearsOwned, cagr, realTotalYield, roe, item.isUnderConstruction, item.isRented);
                   
                   const lostYieldPercent = constants.alternativeYieldPercent - totalNominalYield;
                   const lostAlternativeIncome = lostYieldPercent > 0 ? (Math.max(0, equity) * (lostYieldPercent / 100)) : 0;
@@ -659,6 +659,27 @@ export default function App() {
                             <label className="text-xs text-[#666666] mb-1 block">Цена покупки (полная стоимость по ДДУ, ₽)</label>
                             <input type="number" value={item.purchasePrice || ''} onChange={(e) => updateRE(item.id, 'purchasePrice', Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
+                          
+                          {/* ГАЛОЧКА: ОБЪЕКТ В СТРОЙКЕ */}
+                          <div className="sm:col-span-2 space-y-4 bg-white p-4 border border-[#e5e5e5]">
+                            <div className="flex items-center space-x-3 text-sm">
+                              <input 
+                                type="checkbox" 
+                                id={`construction-${item.id}`}
+                                checked={item.isUnderConstruction || false} 
+                                onChange={(e) => {
+                                  updateRE(item.id, 'isUnderConstruction', e.target.checked);
+                                  if (e.target.checked) {
+                                    updateRE(item.id, 'isRented', false);
+                                    updateRE(item.id, 'rentIncome', 0);
+                                  }
+                                }} 
+                                className="w-4 h-4 accent-[#987362] cursor-pointer" 
+                              />
+                              <label htmlFor={`construction-${item.id}`} className="font-medium cursor-pointer select-none">Объект находится в стройке</label>
+                            </div>
+                          </div>
+
                           <div className="sm:col-span-2 space-y-4 bg-white p-4 border border-[#e5e5e5]">
                             <div className="flex items-center space-x-3 text-sm">
                               <input 
@@ -691,24 +712,28 @@ export default function App() {
                               </div>
                             )}
                           </div>
-                          <div className="sm:col-span-2 space-y-4 bg-white p-4 border border-[#e5e5e5]">
-                            <div className="flex items-center space-x-3 text-sm">
-                              <input 
-                                type="checkbox" 
-                                id={`rent-${item.id}`}
-                                checked={item.isRented} 
-                                onChange={(e) => updateRE(item.id, 'isRented', e.target.checked)} 
-                                className="w-4 h-4 accent-[#987362] cursor-pointer" 
-                              />
-                              <label htmlFor={`rent-${item.id}`} className="font-medium cursor-pointer select-none">Актив сдается в аренду</label>
-                            </div>
-                            {item.isRented && (
-                              <div className="pl-7 border-l-2 border-[#e5e5e5] mt-4">
-                                <label className="text-xs text-[#666666] mb-1 block">Доход от аренды в месяц (₽)</label>
-                                <input type="number" value={item.rentIncome || ''} onChange={(e) => updateRE(item.id, 'rentIncome', Number(e.target.value))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                          
+                          {/* ПОЛЯ АРЕНДЫ ПОКАЗЫВАЮТСЯ ТОЛЬКО ЕСЛИ ОБЪЕКТ НЕ В СТРОЙКЕ */}
+                          {!item.isUnderConstruction && (
+                            <div className="sm:col-span-2 space-y-4 bg-white p-4 border border-[#e5e5e5]">
+                              <div className="flex items-center space-x-3 text-sm">
+                                <input 
+                                  type="checkbox" 
+                                  id={`rent-${item.id}`}
+                                  checked={item.isRented} 
+                                  onChange={(e) => updateRE(item.id, 'isRented', e.target.checked)} 
+                                  className="w-4 h-4 accent-[#987362] cursor-pointer" 
+                                />
+                                <label htmlFor={`rent-${item.id}`} className="font-medium cursor-pointer select-none">Актив сдается в аренду</label>
                               </div>
-                            )}
-                          </div>
+                              {item.isRented && (
+                                <div className="pl-7 border-l-2 border-[#e5e5e5] mt-4">
+                                  <label className="text-xs text-[#666666] mb-1 block">Доход от аренды в месяц (₽)</label>
+                                  <input type="number" value={item.rentIncome || ''} onChange={(e) => updateRE(item.id, 'rentIncome', Number(e.target.value))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="mt-6 pt-6 border-t border-[#e5e5e5] flex justify-end">
                           <button onClick={() => toggleEditRE(item.id)} className="bg-[#987362] hover:bg-[#826152] text-white px-6 py-2.5 text-sm font-medium transition-colors">
@@ -729,6 +754,7 @@ export default function App() {
                           <h4 className="font-tenor text-2xl mb-1 flex items-center">
                             <Home className="w-5 h-5 mr-2 text-[#987362]" />
                             {(item.type || "Объект") + (item.city ? " в г. " + item.city : "")}
+                            {item.isUnderConstruction && <span className="ml-3 px-2 py-0.5 bg-[#f5e6e0] text-[#987362] text-xs rounded border border-[#e5e5e5] font-montserrat">В стройке</span>}
                           </h4>
                           <p className="text-sm text-[#666666] font-light">{"Куплено в " + item.purchaseYear + " году"}</p>
                         </div>
@@ -762,8 +788,9 @@ export default function App() {
                         </div>
                         <div>
                           <p className="text-xs text-[#666666] mb-1 font-light">Доходность потока</p>
-                          <p className={`font-medium text-xl ${roe >= 0 ? "text-green-600" : "text-red-600"}`}>
-                            {roe.toFixed(1) + "%"} <span className="text-xs text-[#a0a0a0] font-light">в год</span>
+                          <p className={`font-medium text-xl ${item.isUnderConstruction ? "text-[#a0a0a0]" : (roe > 0 ? "text-green-600" : "text-red-600")}`}>
+                            {item.isUnderConstruction ? "В стройке" : roe.toFixed(1) + "%"} 
+                            {!item.isUnderConstruction && <span className="text-xs text-[#a0a0a0] font-light">в год</span>}
                           </p>
                         </div>
                         <div className="col-span-2 bg-[#fafafa] p-3 border border-[#e5e5e5] rounded flex flex-col justify-center">
