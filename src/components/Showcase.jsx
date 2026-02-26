@@ -6,7 +6,7 @@ export const Showcase = ({ formatMoney }) => {
     {
       id: 1,
       image: 'https://optim.tildacdn.com/tild3766-3436-4362-b365-363963643036/-/format/webp/IMG_3601.PNG.webp',
-      type: 'Студия',
+      type: 'Студия, 20 кв.м',
       location: 'Санкт-Петербург, Васильевский остров',
       class: 'Бизнес-класс',
       price: 13649310,
@@ -32,7 +32,7 @@ export const Showcase = ({ formatMoney }) => {
     {
       id: 3,
       image: 'https://optim.tildacdn.com/tild3131-6363-4430-a262-343464326638/-/format/webp/IMG_3603.PNG.webp',
-      type: 'Студия',
+      type: 'Студия, 25 кв.м',
       location: 'Калининград, историческая часть',
       class: 'Бизнес-класс',
       price: 8981807,
@@ -50,7 +50,7 @@ export const Showcase = ({ formatMoney }) => {
         <div>
           <h2 className="text-3xl md:text-4xl font-tenor tracking-tight mb-2 text-[#222222]">Витрина ликвидных лотов</h2>
           <p className="text-[#666666] font-light text-sm max-w-3xl leading-relaxed">
-            Примеры реальных объектов недвижимости, которые подходят под стратегию масштабирования капитала за счет правильного ипотечного плеча (рассрочки) и потенциала локации.
+            Примеры реальных объектов недвижимости, которые подходят под стратегию масштабирования капитала за счет правильного ипотечного плеча (рассрочки) и потенциала локации
           </p>
         </div>
       </div>
@@ -106,7 +106,7 @@ export const Showcase = ({ formatMoney }) => {
                   <span className="text-xs text-[#666666] font-light">≈ {lot.cagr}% в год</span>
                 </div>
                 <div className="mt-2 pt-2 border-t border-[#e5d5ce]/50 flex justify-between items-center">
-                  <span className="text-xs text-[#987362] font-medium">Потенциал прибыли:</span>
+                  <span className="text-xs text-[#987362] font-medium">Потенциал прибыли</span>
                   <span className="text-sm font-bold text-[#987362]">~{formatMoney(lot.profit5Years)}</span>
                 </div>
               </div>
