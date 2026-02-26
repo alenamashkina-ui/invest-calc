@@ -412,7 +412,7 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
-  // Надежная функция генерации PDF через html2pdf.js
+  // Исправленная функция генерации PDF
   const handlePrint = () => {
     if (isGeneratingPdf) return;
     setIsGeneratingPdf(true);
@@ -420,8 +420,8 @@ export default function App() {
     const element = document.getElementById('pdf-content');
     
     const opt = {
-      margin:       [10, 10, 20, 10], // Оставляем место внизу страницы
-      filename:     'Диагностика активов и план роста капитала.pdf', // Правильное название с пробелами
+      margin:       [10, 10, 10, 10], 
+      filename:     'Диагностика_активов.pdf',
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true, ignoreElements: (node) => node.classList?.contains('no-print') },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -430,32 +430,14 @@ export default function App() {
     html2pdf()
       .set(opt)
       .from(element)
-      .toPdf()
-      .get('pdf')
-      .then((pdf) => {
-        const totalPages = pdf.internal.getNumberOfPages();
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        
-        // Штампуем текст на каждую страницу снизу
-        for (let i = 1; i <= totalPages; i++) {
-          pdf.setPage(i);
-          pdf.setFontSize(10);
-          pdf.setTextColor(150); // Серый цвет
-          // Название документа слева внизу
-          pdf.text('Диагностика активов и план роста капитала', 10, pdfHeight - 8);
-          // Надежный текстовый логотип справа
-          pdf.text('Надо брать', pdfWidth - 30, pdfHeight - 8);
-        }
-      })
       .save()
       .then(() => {
-        setIsGeneratingPdf(false); // Возвращаем кнопку в нормальное состояние
+        setIsGeneratingPdf(false);
       })
       .catch((err) => {
         console.error(err);
         setIsGeneratingPdf(false);
-        alert('Произошла ошибка при скачивании PDF');
+        alert('Ошибка при скачивании PDF');
       });
   };
 
@@ -489,7 +471,6 @@ export default function App() {
       <div id="pdf-content" className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 overflow-x-hidden">
         <div className="max-w-6xl mx-auto space-y-16">
           <header className="text-center space-y-4 pt-10 flex flex-col items-center">
-            {/* Убрали логотип в шапке */}
             <h1 className="text-4xl md:text-5xl font-tenor tracking-tight">Инвестиционный калькулятор</h1>
             <p className="text-lg text-[#666666] font-light max-w-2xl mx-auto px-4">
               Диагностика ваших активов и план максимизации роста капитала
@@ -1057,7 +1038,6 @@ export default function App() {
           <footer className="pt-16 pb-8 border-t border-[#e5e5e5] mt-16 text-center md:text-left print-break-inside-avoid">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-[#666666]">
                <div className="space-y-2 flex flex-col items-center md:items-start">
-                 {/* Футер вернулся, логотип убрали */}
                  <p className="font-medium text-[#222222]">ИП Соболева Виктория Викторовна</p>
                  <p className="text-xs">ОГРНИП: 321508100582522</p>
                </div>
