@@ -15,7 +15,7 @@ export const constants = {
   inflation: 6,
   taxRate: 0.13,
   taxFreeYears: 5,
-  conservativeYield: 0.05,
+  conservativeYield: 0.07,
   alternativeYieldPercent: 13
 };
 
