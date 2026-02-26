@@ -60,8 +60,9 @@ export const LeadModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1c1c1c]/40 backdrop-blur-sm no-print">
-      <div className="bg-white w-full max-w-md p-6 md:p-8 relative shadow-xl">
+    // ВАЖНО: изменили центрирование на items-start и добавили отступ сверху pt-[10vh], плюс скролл overflow-y-auto
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-start pt-[10vh] pb-10 overflow-y-auto px-4 bg-[#1c1c1c]/60 backdrop-blur-sm no-print">
+      <div className="bg-white w-full max-w-md p-6 md:p-8 relative shadow-2xl shrink-0 my-auto">
         <button onClick={onClose} className="absolute top-4 right-4 text-[#a0a0a0] hover:text-[#222222] transition-colors">
           <X className="w-6 h-6" />
         </button>
@@ -77,7 +78,7 @@ export const LeadModal = ({ isOpen, onClose }) => {
         ) : (
           <>
             <h3 className="text-2xl font-tenor mb-2 text-[#222222]">Запись на разбор</h3>
-            <p className="text-sm text-[#666666] font-light mb-6">
+            <p className="text-sm text-[#666666] font-light mb-6 pr-4">
               Оставьте контакты, и мы свяжемся с вами, чтобы превратить расчет в реальную стратегию
             </p>
             
