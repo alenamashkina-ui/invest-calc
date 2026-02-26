@@ -13,9 +13,40 @@ import { Showcase } from './components/Showcase';
 import { ChartSection } from './components/ChartSection';
 import { LeadModal } from './components/LeadModal';
 
+// Хелпер для форматирования чисел с пробелами
 const formatNumInput = (val) => {
   if (val === '' || val === null || val === undefined) return '';
   return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
+// Умный компонент ввода, который не ломает курсор и убирает нули при стирании
+const NumberInput = ({ value, onChange, className, placeholder }) => {
+  const [isFocused, setIsFocused] = useState(false);
+
+  let displayValue = value;
+  if (value === '' || value === null || value === undefined) {
+    displayValue = '';
+  } else if (!isFocused) {
+    displayValue = formatNumInput(value);
+  }
+
+  const handleChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    onChange(raw === '' ? '' : Number(raw));
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={displayValue}
+      onChange={handleChange}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
 };
 
 export default function App() {
@@ -89,31 +120,38 @@ export default function App() {
     const reData = [];
 
     realEstate.forEach(item => {
-      const yearsOwned = Math.max(1, CURRENT_YEAR - item.purchaseYear);
-      const commission = item.currentValue * constants.commissionPercent;
+      const yearsOwned = Math.max(1, CURRENT_YEAR - (Number(item.purchaseYear) || CURRENT_YEAR));
+      const cValue = Number(item.currentValue) || 0;
+      const pPrice = Number(item.purchasePrice) || 0;
+      const lBalance = Number(item.loanBalance) || 0;
+      
+      const commission = cValue * constants.commissionPercent;
       let tax = 0;
-      if (yearsOwned < constants.taxFreeYears && item.currentValue > item.purchasePrice) {
-        tax = (item.currentValue - item.purchasePrice) * constants.taxRate;
+      if (yearsOwned < constants.taxFreeYears && cValue > pPrice) {
+        tax = (cValue - pPrice) * constants.taxRate;
       }
-      const activeLoanBalance = item.hasMortgage ? (item.loanBalance || 0) : 0;
-      const equity = Math.max(0, item.currentValue - activeLoanBalance - commission - tax);
+      const activeLoanBalance = item.hasMortgage ? lBalance : 0;
+      const equity = Math.max(0, cValue - activeLoanBalance - commission - tax);
       
       totalPotentialCapital += equity;
-      reData.push({ item, yearsOwned, equity });
+      reData.push({ item, yearsOwned, equity, cValue, pPrice });
     });
 
-    deposits.forEach(item => { totalPotentialCapital += item.amount; });
-    stocks.forEach(item => { totalPotentialCapital += item.amount; });
+    deposits.forEach(item => { totalPotentialCapital += Number(item.amount) || 0; });
+    stocks.forEach(item => { totalPotentialCapital += Number(item.amount) || 0; });
     const cashNum = Number(cash) || 0;
     totalPotentialCapital += cashNum;
 
-    reData.forEach(({ item, yearsOwned, equity }) => {
-      const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
+    reData.forEach(({ item, yearsOwned, equity, cValue, pPrice }) => {
+      const rIncome = Number(item.rentIncome) || 0;
+      const mPayment = Number(item.mortgagePayment) || 0;
+      
+      const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? rIncome : 0) - (item.hasMortgage ? mPayment : 0);
       const roe = equity > 0 ? ((netMonthlyRent * 12) / equity) * 100 : 0;
       
       let cagr = 0;
-      if (item.purchasePrice > 0 && item.currentValue > 0) {
-        cagr = (Math.pow(item.currentValue / item.purchasePrice, 1 / yearsOwned) - 1) * 100;
+      if (pPrice > 0 && cValue > 0) {
+        cagr = (Math.pow(cValue / pPrice, 1 / yearsOwned) - 1) * 100;
       }
       
       const totalNominalYield = cagr + roe;
@@ -130,29 +168,33 @@ export default function App() {
     });
 
     deposits.forEach(item => {
-      const realYield = item.rate - constants.inflation;
+      const amt = Number(item.amount) || 0;
+      const rate = Number(item.rate) || 0;
+      const realYield = rate - constants.inflation;
       const audit = getDepositAudit(realYield);
       
       if (audit.level === 'red' || audit.level === 'orange' || realYield < 0) {
-        inefficientCapital += item.amount;
+        inefficientCapital += amt;
       }
       
-      totalCurrentRealIncome += item.amount * (realYield / 100);
-      const lostYield = constants.alternativeYieldPercent - item.rate;
-      if (lostYield > 0) totalLostIncome += item.amount * (lostYield / 100);
+      totalCurrentRealIncome += amt * (realYield / 100);
+      const lostYield = constants.alternativeYieldPercent - rate;
+      if (lostYield > 0) totalLostIncome += amt * (lostYield / 100);
     });
 
     stocks.forEach(item => {
-      const realYield = item.yield - constants.inflation;
+      const amt = Number(item.amount) || 0;
+      const yieldPct = Number(item.yield) || 0;
+      const realYield = yieldPct - constants.inflation;
       const audit = getStockAudit(realYield);
       
       if (audit.level === 'red' || audit.level === 'orange') {
-        inefficientCapital += item.amount;
+        inefficientCapital += amt;
       }
       
-      totalCurrentRealIncome += item.amount * (realYield / 100);
-      const lostYield = constants.alternativeYieldPercent - item.yield;
-      if (lostYield > 0) totalLostIncome += item.amount * (lostYield / 100);
+      totalCurrentRealIncome += amt * (realYield / 100);
+      const lostYield = constants.alternativeYieldPercent - yieldPct;
+      if (lostYield > 0) totalLostIncome += amt * (lostYield / 100);
     });
 
     if (cashNum > 0) {
@@ -186,7 +228,7 @@ export default function App() {
   }, [realEstate, deposits, stocks, cash]);
 
   useEffect(() => {
-    setStartCapital(Math.round(auditResults.totalPotentialCapital).toString());
+    setStartCapital(Math.round(auditResults.totalPotentialCapital));
   }, [auditResults.totalPotentialCapital]);
 
   const targetCapital = useMemo(() => {
@@ -195,8 +237,8 @@ export default function App() {
   }, [desiredPassiveIncome]);
 
   const calculationResults = useMemo(() => {
-    const numStartCapital = Number(startCapital);
-    const numPaymentLimit = Number(monthlyPaymentLimit);
+    const numStartCapital = Number(startCapital) || 0;
+    const numPaymentLimit = Number(monthlyPaymentLimit) || 0;
     const safeStartCapital = numStartCapital > 0 ? numStartCapital : 1;
     const safePaymentLimit = numPaymentLimit >= 0 ? numPaymentLimit : 0;
     
@@ -218,11 +260,10 @@ export default function App() {
       let cycleProperties = [];
       let cycleUnusedCapital = 0;
 
-      if (cycle === 0) {
-        let remainingCapital = currentCapital;
-        let remainingPaymentLimit = isAutoPayment ? Infinity : safePaymentLimit;
+      let remainingCapital = currentCapital;
+      let remainingPaymentLimit = isAutoPayment ? Infinity : safePaymentLimit;
 
-        // Попытка 1: Семейная ипотека (строго 20% ПВ)
+      if (cycle === 0) {
         if (isFamilyMortgage && remainingCapital > 0 && remainingPaymentLimit > 0) {
           const familyRateDecimal = (constants.rateFamily / 100) / 12;
           const annuityFamily = (familyRateDecimal * Math.pow(1 + familyRateDecimal, totalMonths)) / (Math.pow(1 + familyRateDecimal, totalMonths) - 1);
@@ -250,7 +291,6 @@ export default function App() {
           }
         }
 
-        // Попытка 2: Докупка на остатки по стандартной ставке (строго 20% ПВ)
         if (remainingCapital > 0 && remainingPaymentLimit > 0) {
           const standardRateDecimal = (constants.rateStandardFirst / 100) / 12;
           const annuityStandard = (standardRateDecimal * Math.pow(1 + standardRateDecimal, totalMonths)) / (Math.pow(1 + standardRateDecimal, totalMonths) - 1);
@@ -274,31 +314,25 @@ export default function App() {
           }
         }
         
-        cycleUnusedCapital = Math.max(0, remainingCapital);
-
       } else {
-        // ЦИКЛЫ 2 И 3: АВТОМАТИЧЕСКОЕ РЕИНВЕСТИРОВАНИЕ
-        // Если в первом цикле клиент был согласен на платежи (кредит),
-        // весь капитал автоматически становится 20% взносом для новых больших объектов.
-        if (isAutoPayment || safePaymentLimit > 0) {
+        if (remainingCapital > 0 && (isAutoPayment || safePaymentLimit > 0)) {
           const nextRateDecimal = (constants.rateNextCycles / 100) / 12;
           const annuityNext = (nextRateDecimal * Math.pow(1 + nextRateDecimal, totalMonths)) / (Math.pow(1 + nextRateDecimal, totalMonths) - 1);
 
-          const price = currentCapital / constants.downPaymentPercent;
-          const dp = currentCapital;
+          const price = remainingCapital / constants.downPaymentPercent;
+          const dp = remainingCapital;
           const loan = price - dp;
           const payment = loan * annuityNext;
 
           cycleProperties.push({
             price: price, loan: loan, rate: nextRateDecimal, payment: payment
           });
-          cycleUnusedCapital = 0;
-        } else {
-          // Если платеж 0, клиент не берет ипотеку. Деньги просто лежат.
-          cycleUnusedCapital = currentCapital;
+
+          remainingCapital = 0;
         }
       }
 
+      cycleUnusedCapital = Math.max(0, remainingCapital);
       let cycleMonthlyPayment = cycleProperties.reduce((sum, p) => sum + p.payment, 0);
 
       for (let year = 1; year <= constants.cycleYears; year++) {
@@ -321,7 +355,6 @@ export default function App() {
           initialTotalPropertyValue += prop.price;
         });
         
-        // К неиспользованному капиталу не прибавляется рост недвижимости
         let netCapital = totalPropertyValue - totalCommission - totalLoanBalance + cycleUnusedCapital;
         let realCapital = netCapital / Math.pow(1 + constants.inflation / 100, globalYear);
 
@@ -361,20 +394,30 @@ export default function App() {
     let nominal = 0;
 
     realEstate.forEach(item => {
-      const futureValue = item.currentValue * Math.pow(1 + constants.basePropertyGrowth, 15);
-      const remainingDebt = item.hasMortgage ? getRemainingBalance(item.loanBalance, item.mortgageRate || 0, item.mortgagePayment || 0, 15 * 12) : 0;
+      const cValue = Number(item.currentValue) || 0;
+      const lBalance = Number(item.loanBalance) || 0;
+      const mRate = Number(item.mortgageRate) || 0;
+      const mPayment = Number(item.mortgagePayment) || 0;
+      const rIncome = Number(item.rentIncome) || 0;
+
+      const futureValue = cValue * Math.pow(1 + constants.basePropertyGrowth, 15);
+      const remainingDebt = item.hasMortgage ? getRemainingBalance(lBalance, mRate, mPayment, 15 * 12) : 0;
       const futureCommission = futureValue * constants.commissionPercent;
-      const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
+      const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? rIncome : 0) - (item.hasMortgage ? mPayment : 0);
       const accumulatedRent = netMonthlyRent * 12 * 15;
       nominal += futureValue - remainingDebt - futureCommission + accumulatedRent;
     });
 
     deposits.forEach(item => {
-      nominal += item.amount * Math.pow(1 + item.rate / 100, 15);
+      const amt = Number(item.amount) || 0;
+      const rate = Number(item.rate) || 0;
+      nominal += amt * Math.pow(1 + rate / 100, 15);
     });
 
     stocks.forEach(item => {
-      nominal += item.amount * Math.pow(1 + item.yield / 100, 15);
+      const amt = Number(item.amount) || 0;
+      const yieldPct = Number(item.yield) || 0;
+      nominal += amt * Math.pow(1 + yieldPct / 100, 15);
     });
 
     nominal += Number(cash) || 0;
@@ -388,20 +431,30 @@ export default function App() {
       let nominal = 0;
 
       realEstate.forEach(item => {
-        const futureValue = item.currentValue * Math.pow(1 + constants.basePropertyGrowth, year);
-        const remainingDebt = item.hasMortgage ? getRemainingBalance(item.loanBalance, item.mortgageRate || 0, item.mortgagePayment || 0, year * 12) : 0;
+        const cValue = Number(item.currentValue) || 0;
+        const lBalance = Number(item.loanBalance) || 0;
+        const mRate = Number(item.mortgageRate) || 0;
+        const mPayment = Number(item.mortgagePayment) || 0;
+        const rIncome = Number(item.rentIncome) || 0;
+
+        const futureValue = cValue * Math.pow(1 + constants.basePropertyGrowth, year);
+        const remainingDebt = item.hasMortgage ? getRemainingBalance(lBalance, mRate, mPayment, year * 12) : 0;
         const futureCommission = futureValue * constants.commissionPercent;
-        const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
+        const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? rIncome : 0) - (item.hasMortgage ? mPayment : 0);
         const accumulatedRent = netMonthlyRent * 12 * year;
         nominal += futureValue - remainingDebt - futureCommission + accumulatedRent;
       });
 
       deposits.forEach(item => {
-        nominal += item.amount * Math.pow(1 + item.rate / 100, year);
+        const amt = Number(item.amount) || 0;
+        const rate = Number(item.rate) || 0;
+        nominal += amt * Math.pow(1 + rate / 100, year);
       });
 
       stocks.forEach(item => {
-        nominal += item.amount * Math.pow(1 + item.yield / 100, year);
+        const amt = Number(item.amount) || 0;
+        const yieldPct = Number(item.yield) || 0;
+        nominal += amt * Math.pow(1 + yieldPct / 100, year);
       });
 
       nominal += Number(cash) || 0;
@@ -414,8 +467,8 @@ export default function App() {
     });
   }, [calculationResults.yearlyData, realEstate, deposits, stocks, cash]);
 
-  const currentProgress = Math.min(100, (currentStrategyFinalReal / targetCapital) * 100).toFixed(1);
-  const activeProgress = Math.min(100, (calculationResults.finalReal / targetCapital) * 100).toFixed(1);
+  const currentProgress = targetCapital > 0 ? Math.min(100, (currentStrategyFinalReal / targetCapital) * 100).toFixed(1) : 0;
+  const activeProgress = targetCapital > 0 ? Math.min(100, (calculationResults.finalReal / targetCapital) * 100).toFixed(1) : 0;
   const lostProfit = Math.max(0, calculationResults.finalReal - currentStrategyFinalReal);
 
   const formatMoney = (val) => {
@@ -425,15 +478,15 @@ export default function App() {
 
   const addRE = () => {
     setRealEstate(prev => [{
-      id: Date.now(), type: '', city: '', purchaseYear: CURRENT_YEAR, purchasePrice: 0, currentValue: 0,
-      hasMortgage: false, initialPayment: 0, loanBalance: 0, mortgagePayment: 0, mortgageRate: 0,
-      isUnderConstruction: false, isRented: false, rentIncome: 0, isEditing: true
+      id: Date.now(), type: '', city: '', purchaseYear: CURRENT_YEAR, purchasePrice: '', currentValue: '',
+      hasMortgage: false, initialPayment: '', loanBalance: '', mortgagePayment: '', mortgageRate: '',
+      isUnderConstruction: false, isRented: false, rentIncome: '', isEditing: true
     }, ...prev]);
   };
 
-  const addDeposit = () => setDeposits(prev => [{ id: Date.now(), amount: 0, rate: 0, isEditing: true }, ...prev]);
-  const addStock = () => setStocks(prev => [{ id: Date.now(), amount: 0, yield: 0, isEditing: true }, ...prev]);
-  const addCash = () => { setCash(0); setIsEditingCash(true); setCashId(Date.now()); };
+  const addDeposit = () => setDeposits(prev => [{ id: Date.now(), amount: '', rate: '', isEditing: true }, ...prev]);
+  const addStock = () => setStocks(prev => [{ id: Date.now(), amount: '', yield: '', isEditing: true }, ...prev]);
+  const addCash = () => { setCash(''); setIsEditingCash(true); setCashId(Date.now()); };
 
   const updateRE = (id, field, value) => setRealEstate(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
   const toggleEditRE = (id) => setRealEstate(prev => prev.map(item => item.id === id ? { ...item, isEditing: !item.isEditing } : item));
@@ -613,23 +666,29 @@ export default function App() {
               {combinedAssets.map(asset => {
                 if (asset.assetCategory === 'realEstate') {
                   const item = asset;
-                  const yearsOwned = Math.max(1, CURRENT_YEAR - item.purchaseYear);
-                  const commission = item.currentValue * constants.commissionPercent;
+                  const yearsOwned = Math.max(1, CURRENT_YEAR - (Number(item.purchaseYear) || CURRENT_YEAR));
+                  const cValue = Number(item.currentValue) || 0;
+                  const pPrice = Number(item.purchasePrice) || 0;
+                  
+                  const commission = cValue * constants.commissionPercent;
                   let tax = 0;
-                  if (yearsOwned < constants.taxFreeYears && item.currentValue > item.purchasePrice) {
-                    tax = (item.currentValue - item.purchasePrice) * constants.taxRate;
+                  if (yearsOwned < constants.taxFreeYears && cValue > pPrice) {
+                    tax = (cValue - pPrice) * constants.taxRate;
                   }
 
-                  const activeLoanBalance = item.hasMortgage ? (item.loanBalance || 0) : 0;
-                  const equity = item.currentValue - activeLoanBalance - commission - tax;
-                  const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? (item.rentIncome || 0) : 0) - (item.hasMortgage ? (item.mortgagePayment || 0) : 0);
+                  const activeLoanBalance = item.hasMortgage ? (Number(item.loanBalance) || 0) : 0;
+                  const equity = cValue - activeLoanBalance - commission - tax;
+                  
+                  const mPayment = Number(item.mortgagePayment) || 0;
+                  const rIncome = Number(item.rentIncome) || 0;
+                  const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? rIncome : 0) - (item.hasMortgage ? mPayment : 0);
                   const roe = equity > 0 ? ((netMonthlyRent * 12) / equity) * 100 : 0;
                   
                   let cagr = 0;
-                  if (item.purchasePrice > 0 && item.currentValue > 0) {
-                    cagr = (Math.pow(item.currentValue / item.purchasePrice, 1 / yearsOwned) - 1) * 100;
+                  if (pPrice > 0 && cValue > 0) {
+                    cagr = (Math.pow(cValue / pPrice, 1 / yearsOwned) - 1) * 100;
                   }
-                  const totalGrowthPercent = item.purchasePrice > 0 ? (((item.currentValue - item.purchasePrice) / item.purchasePrice) * 100).toFixed(1) : 0;
+                  const totalGrowthPercent = pPrice > 0 ? (((cValue - pPrice) / pPrice) * 100).toFixed(1) : 0;
                   
                   const totalNominalYield = cagr + roe;
                   const realTotalYield = totalNominalYield - constants.inflation;
@@ -666,16 +725,16 @@ export default function App() {
                           </div>
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Год покупки</label>
-                            <input type="number" value={item.purchaseYear} onChange={(e) => updateRE(item.id, 'purchaseYear', Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <input type="number" value={item.purchaseYear === '' ? '' : item.purchaseYear} onChange={(e) => updateRE(item.id, 'purchaseYear', e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Текущая рыночная цена (₽)</label>
-                            <input type="text" inputMode="numeric" value={formatNumInput(item.currentValue || '')} onChange={(e) => updateRE(item.id, 'currentValue', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
-                            <button className="text-[10px] text-[#987362] hover:underline mt-1 flex items-center"><ExternalLink className="w-3 h-3 mr-1" /> Запросить точную оценку</button>
+                            <NumberInput value={item.currentValue} onChange={(val) => updateRE(item.id, 'currentValue', val)} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <button onClick={() => setIsModalOpen(true)} className="text-[10px] text-[#987362] hover:underline mt-1 flex items-center"><ExternalLink className="w-3 h-3 mr-1" /> Запросить точную оценку</button>
                           </div>
                           <div className="sm:col-span-2">
                             <label className="text-xs text-[#666666] mb-1 block">Цена покупки (полная стоимость по ДДУ, ₽)</label>
-                            <input type="text" inputMode="numeric" value={formatNumInput(item.purchasePrice || '')} onChange={(e) => updateRE(item.id, 'purchasePrice', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <NumberInput value={item.purchasePrice} onChange={(val) => updateRE(item.id, 'purchasePrice', val)} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                           
                           <div className="sm:col-span-2 space-y-4 bg-white p-4 border border-[#e5e5e5]">
@@ -688,7 +747,7 @@ export default function App() {
                                   updateRE(item.id, 'isUnderConstruction', e.target.checked);
                                   if (e.target.checked) {
                                     updateRE(item.id, 'isRented', false);
-                                    updateRE(item.id, 'rentIncome', 0);
+                                    updateRE(item.id, 'rentIncome', '');
                                   }
                                 }} 
                                 className="w-4 h-4 accent-[#987362] cursor-pointer" 
@@ -712,19 +771,19 @@ export default function App() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pl-7 border-l-2 border-[#e5e5e5] mt-4">
                                 <div>
                                   <label className="text-xs text-[#666666] mb-1 block">Первый взнос (₽)</label>
-                                  <input type="text" inputMode="numeric" value={formatNumInput(item.initialPayment || '')} onChange={(e) => updateRE(item.id, 'initialPayment', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                  <NumberInput value={item.initialPayment} onChange={(val) => updateRE(item.id, 'initialPayment', val)} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                                 </div>
                                 <div>
                                   <label className="text-xs text-[#666666] mb-1 block">Остаток долга (₽)</label>
-                                  <input type="text" inputMode="numeric" value={formatNumInput(item.loanBalance || '')} onChange={(e) => updateRE(item.id, 'loanBalance', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                  <NumberInput value={item.loanBalance} onChange={(val) => updateRE(item.id, 'loanBalance', val)} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                                 </div>
                                 <div>
                                   <label className="text-xs text-[#666666] mb-1 block">Платеж в месяц (₽)</label>
-                                  <input type="text" inputMode="numeric" value={formatNumInput(item.mortgagePayment || '')} onChange={(e) => updateRE(item.id, 'mortgagePayment', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                  <NumberInput value={item.mortgagePayment} onChange={(val) => updateRE(item.id, 'mortgagePayment', val)} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                                 </div>
                                 <div>
                                   <label className="text-xs text-[#666666] mb-1 block">Ставка (%)</label>
-                                  <input type="number" value={item.mortgageRate || ''} onChange={(e) => updateRE(item.id, 'mortgageRate', Number(e.target.value))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                  <input type="number" value={item.mortgageRate === '' ? '' : item.mortgageRate} onChange={(e) => updateRE(item.id, 'mortgageRate', e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                                 </div>
                               </div>
                             )}
@@ -745,7 +804,7 @@ export default function App() {
                               {item.isRented && (
                                 <div className="pl-7 border-l-2 border-[#e5e5e5] mt-4">
                                   <label className="text-xs text-[#666666] mb-1 block">Доход от аренды в месяц (₽)</label>
-                                  <input type="text" inputMode="numeric" value={formatNumInput(item.rentIncome || '')} onChange={(e) => updateRE(item.id, 'rentIncome', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                  <NumberInput value={item.rentIncome} onChange={(val) => updateRE(item.id, 'rentIncome', val)} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                                 </div>
                               )}
                             </div>
@@ -828,10 +887,11 @@ export default function App() {
 
                 if (asset.assetCategory === 'deposit') {
                   const dep = asset;
-                  const realYield = dep.rate - constants.inflation;
+                  const rate = Number(dep.rate) || 0;
+                  const realYield = rate - constants.inflation;
                   const audit = getDepositAudit(realYield);
-                  const lostYieldPercent = constants.alternativeYieldPercent - dep.rate;
-                  const lostAlternativeIncome = lostYieldPercent > 0 ? (dep.amount * (lostYieldPercent / 100)) : 0;
+                  const lostYieldPercent = constants.alternativeYieldPercent - rate;
+                  const lostAlternativeIncome = lostYieldPercent > 0 ? ((Number(dep.amount) || 0) * (lostYieldPercent / 100)) : 0;
                   const cStyles = getAlertStyles(audit.level);
 
                   if (dep.isEditing) {
@@ -846,11 +906,11 @@ export default function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Сумма на счету (₽)</label>
-                            <input type="text" inputMode="numeric" value={formatNumInput(dep.amount === 0 ? '' : dep.amount)} onChange={(e) => updateDeposit(dep.id, 'amount', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <NumberInput value={dep.amount} onChange={(val) => updateDeposit(dep.id, 'amount', val)} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Годовая ставка (%)</label>
-                            <input type="number" value={dep.rate === 0 ? '' : dep.rate} onChange={(e) => updateDeposit(dep.id, 'rate', Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <input type="number" value={dep.rate === '' ? '' : dep.rate} onChange={(e) => updateDeposit(dep.id, 'rate', e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                         </div>
                         <div className="mt-6 pt-6 border-t border-[#e5e5e5] flex justify-end">
@@ -877,8 +937,8 @@ export default function App() {
                         </div>
                         <div>
                           <p className="text-xs text-[#666666] mb-1 font-light">Доходность (ном.)</p>
-                          <p className={`font-medium text-xl ${dep.rate >= constants.inflation ? "text-green-600" : "text-red-600"}`}>
-                            {dep.rate.toFixed(1) + "%"}
+                          <p className={`font-medium text-xl ${rate >= constants.inflation ? "text-green-600" : "text-red-600"}`}>
+                            {rate.toFixed(1) + "%"}
                           </p>
                         </div>
                       </div>
@@ -894,10 +954,11 @@ export default function App() {
 
                 if (asset.assetCategory === 'stock') {
                   const stock = asset;
-                  const realYield = stock.yield - constants.inflation;
+                  const yieldPct = Number(stock.yield) || 0;
+                  const realYield = yieldPct - constants.inflation;
                   const audit = getStockAudit(realYield);
-                  const lostYieldPercent = constants.alternativeYieldPercent - stock.yield;
-                  const lostAlternativeIncome = lostYieldPercent > 0 ? (stock.amount * (lostYieldPercent / 100)) : 0;
+                  const lostYieldPercent = constants.alternativeYieldPercent - yieldPct;
+                  const lostAlternativeIncome = lostYieldPercent > 0 ? ((Number(stock.amount) || 0) * (lostYieldPercent / 100)) : 0;
                   const cStyles = getAlertStyles(audit.level);
 
                   if (stock.isEditing) {
@@ -912,11 +973,11 @@ export default function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Оценка портфеля (₽)</label>
-                            <input type="text" inputMode="numeric" value={formatNumInput(stock.amount === 0 ? '' : stock.amount)} onChange={(e) => updateStock(stock.id, 'amount', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <NumberInput value={stock.amount} onChange={(val) => updateStock(stock.id, 'amount', val)} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Средняя доходность (%)</label>
-                            <input type="number" value={stock.yield === 0 ? '' : stock.yield} onChange={(e) => updateStock(stock.id, 'yield', Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <input type="number" value={stock.yield === '' ? '' : stock.yield} onChange={(e) => updateStock(stock.id, 'yield', e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                         </div>
                         <div className="mt-6 pt-6 border-t border-[#e5e5e5] flex justify-end">
@@ -943,8 +1004,8 @@ export default function App() {
                         </div>
                         <div>
                           <p className="text-xs text-[#666666] mb-1 font-light">Доходность (ном.)</p>
-                          <p className={`font-medium text-xl ${stock.yield >= constants.inflation ? "text-green-600" : "text-red-600"}`}>
-                            {stock.yield.toFixed(1) + "%"}
+                          <p className={`font-medium text-xl ${yieldPct >= constants.inflation ? "text-green-600" : "text-red-600"}`}>
+                            {yieldPct.toFixed(1) + "%"}
                           </p>
                         </div>
                       </div>
@@ -959,9 +1020,9 @@ export default function App() {
                 }
 
                 if (asset.assetCategory === 'cash') {
-                  const share = auditResults.totalPotentialCapital > 0 ? (asset.amount / auditResults.totalPotentialCapital) * 100 : 0;
+                  const share = auditResults.totalPotentialCapital > 0 ? (Number(asset.amount) / auditResults.totalPotentialCapital) * 100 : 0;
                   const audit = getCashAudit(share);
-                  const lostAlternativeIncome = asset.amount * (constants.alternativeYieldPercent / 100);
+                  const lostAlternativeIncome = (Number(asset.amount) || 0) * (constants.alternativeYieldPercent / 100);
                   const cStyles = getAlertStyles(audit.level);
 
                   if (asset.isEditing) {
@@ -975,7 +1036,7 @@ export default function App() {
                         </div>
                         <div>
                           <label className="text-xs text-[#666666] mb-1 block">Наличные (₽)</label>
-                          <input type="text" inputMode="numeric" value={formatNumInput(asset.amount)} onChange={(e) => setCash(e.target.value === '' ? 0 : Number(e.target.value.replace(/\D/g, '')))} className="w-full md:w-1/2 p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                          <NumberInput value={asset.amount} onChange={(val) => setCash(val)} className="w-full md:w-1/2 p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                         </div>
                         <div className="mt-6 pt-6 border-t border-[#e5e5e5] flex justify-end">
                           <button onClick={() => setIsEditingCash(false)} className="bg-[#987362] hover:bg-[#826152] text-white px-6 py-2.5 text-sm font-medium transition-colors">
@@ -1066,7 +1127,7 @@ export default function App() {
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-[#666666]">Стартовый капитал (₽)</label>
-                    <input type="text" inputMode="numeric" value={formatNumInput(startCapital)} onChange={(e) => setStartCapital(e.target.value.replace(/\D/g, ''))} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                    <NumberInput value={startCapital} onChange={(val) => setStartCapital(val)} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                     <p className="text-xs text-[#a0a0a0]">Извлеченный собственный капитал</p>
                   </div>
                   
@@ -1080,7 +1141,7 @@ export default function App() {
                   {!isAutoPayment && (
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-[#666666]">Комфортный платеж в месяц (₽)</label>
-                      <input type="text" inputMode="numeric" value={formatNumInput(monthlyPaymentLimit)} onChange={(e) => setMonthlyPaymentLimit(Number(e.target.value.replace(/\D/g, '')))} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                      <NumberInput value={monthlyPaymentLimit} onChange={(val) => setMonthlyPaymentLimit(val)} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                     </div>
                   )}
 
@@ -1096,7 +1157,7 @@ export default function App() {
 
                   <div className="space-y-2 pt-6 border-t border-[#e5e5e5]">
                     <label className="text-sm font-medium text-[#666666]">Желаемый пассивный доход в месяц (₽)</label>
-                    <input type="text" inputMode="numeric" value={formatNumInput(desiredPassiveIncome || '')} onChange={(e) => setDesiredPassiveIncome(e.target.value === '' ? '' : Number(e.target.value.replace(/\D/g, '')))} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                    <NumberInput value={desiredPassiveIncome} onChange={(val) => setDesiredPassiveIncome(val)} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                     <p className="text-xs text-[#a0a0a0]">Цель через 15 лет</p>
                   </div>
                 </div>
@@ -1149,7 +1210,6 @@ export default function App() {
                <div className="space-y-2">
                   <p className="font-medium text-[#222222]">Документы</p>
                   <a href="#" className="text-xs hover:text-[#987362] transition-colors block">Политика конфиденциальности</a>
-                  <a href="#" className="text-xs hover:text-[#987362] transition-colors block">Договор оферты</a>
                </div>
                <div className="space-y-2">
                   <p className="font-medium text-[#222222]">Контакты</p>
