@@ -14,6 +14,17 @@ import { ChartSection } from './components/ChartSection';
 import { LeadModal } from './components/LeadModal';
 
 export default function App() {
+  // Блокируем изменение цифр при прокрутке тачпадом/колесиком мыши
+  useEffect(() => {
+    const handleWheel = (e) => {
+      if (document.activeElement.type === 'number') {
+        document.activeElement.blur();
+      }
+    };
+    window.addEventListener('wheel', handleWheel);
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, []);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [realEstate, setRealEstate] = useState([
@@ -103,8 +114,6 @@ export default function App() {
       
       const totalNominalYield = cagr + roe;
       const realTotalYield = totalNominalYield - constants.inflation;
-      
-      // Передаем статус стройки и аренды в аудит
       const audit = getRealEstateAudit(yearsOwned, cagr, realTotalYield, roe, item.isUnderConstruction, item.isRented);
 
       if (audit.level === 'red' || audit.level === 'orange') {
@@ -660,7 +669,6 @@ export default function App() {
                             <input type="number" value={item.purchasePrice || ''} onChange={(e) => updateRE(item.id, 'purchasePrice', Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                           
-                          {/* ГАЛОЧКА: ОБЪЕКТ В СТРОЙКЕ */}
                           <div className="sm:col-span-2 space-y-4 bg-white p-4 border border-[#e5e5e5]">
                             <div className="flex items-center space-x-3 text-sm">
                               <input 
@@ -713,7 +721,6 @@ export default function App() {
                             )}
                           </div>
                           
-                          {/* ПОЛЯ АРЕНДЫ ПОКАЗЫВАЮТСЯ ТОЛЬКО ЕСЛИ ОБЪЕКТ НЕ В СТРОЙКЕ */}
                           {!item.isUnderConstruction && (
                             <div className="sm:col-span-2 space-y-4 bg-white p-4 border border-[#e5e5e5]">
                               <div className="flex items-center space-x-3 text-sm">
