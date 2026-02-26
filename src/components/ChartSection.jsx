@@ -39,7 +39,7 @@ export const ChartSection = ({
         <div>
           <p className="text-sm text-[#a0a0a0] mb-2 font-light">Капитал, необходимый для пассивного дохода</p>
           <p className="text-4xl md:text-5xl font-tenor tracking-tight text-[#987362]">{formatMoney(targetCapital)}</p>
-          <p className="text-xs text-[#666666] mt-2 font-light">{"Расчет основан на безопасной доходности " + (constants.conservativeYield * 100) + "% годовых – это уровень, при котором капитал сохраняется и приносит стабильный доход"}</p>
+          <p className="text-xs text-[#666666] mt-2 font-light">{"Расчет основан на безопасной доходности " + Math.round(constants.conservativeYield * 100) + "% годовых – это уровень, при котором капитал сохраняется и приносит стабильный доход"}</p>
         </div>
         <div className="text-left md:text-right border-t md:border-t-0 md:border-l border-[#333333] pt-4 md:pt-0 md:pl-6 min-w-[200px]">
           <p className="text-sm text-[#a0a0a0] mb-1 font-light">Результат по выбранной стратегии</p>
