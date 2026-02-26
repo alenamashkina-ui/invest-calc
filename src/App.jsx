@@ -222,8 +222,8 @@ export default function App() {
         let remainingCapital = currentCapital;
         let remainingPaymentLimit = isAutoPayment ? Infinity : safePaymentLimit;
 
-        // 1. Попытка купить по Семейной ипотеке (строго 20% ПВ)
-        if (isFamilyMortgage && remainingCapital > 0) {
+        // Попытка 1: Семейная ипотека (строго 20% ПВ)
+        if (isFamilyMortgage && remainingCapital > 0 && remainingPaymentLimit > 0) {
           const familyRateDecimal = (constants.rateFamily / 100) / 12;
           const annuityFamily = (familyRateDecimal * Math.pow(1 + familyRateDecimal, totalMonths)) / (Math.pow(1 + familyRateDecimal, totalMonths) - 1);
 
@@ -242,10 +242,7 @@ export default function App() {
             const familyPayment = familyLoan * annuityFamily;
 
             cycleProperties.push({
-              price: familyPrice,
-              loan: familyLoan,
-              rate: familyRateDecimal,
-              payment: familyPayment
+              price: familyPrice, loan: familyLoan, rate: familyRateDecimal, payment: familyPayment
             });
 
             remainingCapital -= familyDP;
@@ -253,13 +250,12 @@ export default function App() {
           }
         }
 
-        // 2. Если остались деньги и лимит платежа, покупаем ВТОРУЮ по стандартной (строго 20% ПВ)
+        // Попытка 2: Докупка на остатки по стандартной ставке (строго 20% ПВ)
         if (remainingCapital > 0 && remainingPaymentLimit > 0) {
           const standardRateDecimal = (constants.rateStandardFirst / 100) / 12;
           const annuityStandard = (standardRateDecimal * Math.pow(1 + standardRateDecimal, totalMonths)) / (Math.pow(1 + standardRateDecimal, totalMonths) - 1);
 
           const maxLoanByPayment = remainingPaymentLimit / annuityStandard;
-          
           const maxPriceByLoan = maxLoanByPayment / (1 - constants.downPaymentPercent);
           const maxPriceByCapital = remainingCapital / constants.downPaymentPercent;
 
@@ -271,37 +267,36 @@ export default function App() {
             const standardPayment = standardLoan * annuityStandard;
 
             cycleProperties.push({
-              price: standardPrice,
-              loan: standardLoan,
-              rate: standardRateDecimal,
-              payment: standardPayment
+              price: standardPrice, loan: standardLoan, rate: standardRateDecimal, payment: standardPayment
             });
 
             remainingCapital -= standardDP;
           }
         }
-
-        // 3. Все неиспользованные копейки ложатся "под подушку" и не растут
+        
         cycleUnusedCapital = Math.max(0, remainingCapital);
 
       } else {
-        // В следующих циклах капитал реинвестируется полностью как единая масса
-        const nextRate = (constants.rateNextCycles / 100) / 12;
-        const annuityNext = (nextRate * Math.pow(1 + nextRate, totalMonths)) / (Math.pow(1 + nextRate, totalMonths) - 1);
+        // ЦИКЛЫ 2 И 3: АВТОМАТИЧЕСКОЕ РЕИНВЕСТИРОВАНИЕ
+        // Если в первом цикле клиент был согласен на платежи (кредит),
+        // весь капитал автоматически становится 20% взносом для новых больших объектов.
+        if (isAutoPayment || safePaymentLimit > 0) {
+          const nextRateDecimal = (constants.rateNextCycles / 100) / 12;
+          const annuityNext = (nextRateDecimal * Math.pow(1 + nextRateDecimal, totalMonths)) / (Math.pow(1 + nextRateDecimal, totalMonths) - 1);
 
-        const price = currentCapital / constants.downPaymentPercent;
-        const dp = currentCapital;
-        const loan = price - dp;
-        const payment = loan * annuityNext;
+          const price = currentCapital / constants.downPaymentPercent;
+          const dp = currentCapital;
+          const loan = price - dp;
+          const payment = loan * annuityNext;
 
-        cycleProperties.push({
-          price: price,
-          loan: loan,
-          rate: nextRate,
-          payment: payment
-        });
-
-        cycleUnusedCapital = 0;
+          cycleProperties.push({
+            price: price, loan: loan, rate: nextRateDecimal, payment: payment
+          });
+          cycleUnusedCapital = 0;
+        } else {
+          // Если платеж 0, клиент не берет ипотеку. Деньги просто лежат.
+          cycleUnusedCapital = currentCapital;
+        }
       }
 
       let cycleMonthlyPayment = cycleProperties.reduce((sum, p) => sum + p.payment, 0);
@@ -326,6 +321,7 @@ export default function App() {
           initialTotalPropertyValue += prop.price;
         });
         
+        // К неиспользованному капиталу не прибавляется рост недвижимости
         let netCapital = totalPropertyValue - totalCommission - totalLoanBalance + cycleUnusedCapital;
         let realCapital = netCapital / Math.pow(1 + constants.inflation / 100, globalYear);
 
@@ -807,7 +803,7 @@ export default function App() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-[#666666] mb-1 font-light">Доходность потока</p>
+                          <p className="text-xs text-[#666666] mb-1 font-light">Чистая арендная доходность</p>
                           <p className={`font-medium text-xl ${item.isUnderConstruction ? "text-[#a0a0a0]" : (roe > 0 ? "text-green-600" : "text-red-600")}`}>
                             {item.isUnderConstruction ? "В стройке" : roe.toFixed(1) + "%"} 
                             {!item.isUnderConstruction && <span className="text-xs text-[#a0a0a0] font-light">в год</span>}
