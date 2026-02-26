@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import html2pdf from 'html2pdf.js';
 import { 
   Calculator, ArrowRight, Plus, Trash2, Home, Wallet, 
   AlertCircle, CheckCircle2, Settings2, Scale, ExternalLink, Download 
@@ -16,7 +15,6 @@ import { LeadModal } from './components/LeadModal';
 
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const [realEstate, setRealEstate] = useState([
     {
@@ -412,33 +410,9 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
-  // Исправленная функция генерации PDF
+  // Возвращаем самую надежную стандартную печать
   const handlePrint = () => {
-    if (isGeneratingPdf) return;
-    setIsGeneratingPdf(true);
-
-    const element = document.getElementById('pdf-content');
-    
-    const opt = {
-      margin:       [10, 10, 10, 10], 
-      filename:     'Диагностика_активов.pdf',
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, ignoreElements: (node) => node.classList?.contains('no-print') },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf()
-      .set(opt)
-      .from(element)
-      .save()
-      .then(() => {
-        setIsGeneratingPdf(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setIsGeneratingPdf(false);
-        alert('Ошибка при скачивании PDF');
-      });
+    window.print();
   };
 
   return (
@@ -465,10 +439,33 @@ export default function App() {
         .animate-urgent-pulse {
           animation: urgentPulse 1.5s infinite;
         }
+
+        /* Идеальные настройки для сохранения PDF через браузер */
+        @media print {
+          @page { margin: 1.5cm; size: A4 portrait; }
+          body, .min-h-screen { 
+            background-color: #fff !important; 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+          }
+          /* Прячем все кнопки и лишние элементы при печати */
+          .no-print { display: none !important; }
+          
+          /* Блокируем разрыв элементов между страницами */
+          .print-break-inside-avoid { 
+            page-break-inside: avoid; 
+            break-inside: avoid; 
+          }
+        }
       `}</style>
 
-      {/* Весь этот блок уйдет в PDF */}
-      <div id="pdf-content" className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 overflow-x-hidden">
+      {/* Этот хитрый блок появится ТОЛЬКО на распечатанном PDF в самом низу каждой страницы */}
+      <div className="hidden print:flex fixed bottom-0 left-0 w-full justify-between items-center py-2 text-[#a0a0a0] text-[10px] z-50 bg-white border-t border-[#e5e5e5]">
+        <span>Диагностика активов и план роста капитала</span>
+        <span className="font-tenor text-sm text-[#222222]">Надо брать</span>
+      </div>
+
+      <div className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 pb-20 overflow-x-hidden">
         <div className="max-w-6xl mx-auto space-y-16">
           <header className="text-center space-y-4 pt-10 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-tenor tracking-tight">Инвестиционный калькулятор</h1>
@@ -1010,11 +1007,10 @@ export default function App() {
             <div className="mt-10 pt-10 border-t border-[#e5e5e5] flex justify-center no-print">
               <button 
                 onClick={handlePrint} 
-                disabled={isGeneratingPdf}
-                className="bg-white hover:bg-[#fafafa] text-[#222222] border border-[#e5e5e5] hover:border-[#987362] px-8 py-4 text-sm font-medium transition-all flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-white hover:bg-[#fafafa] text-[#222222] border border-[#e5e5e5] hover:border-[#987362] px-8 py-4 text-sm font-medium transition-all flex items-center space-x-2"
               >
                 <Download className="w-5 h-5 text-[#987362]" />
-                <span>{isGeneratingPdf ? 'Создаем документ...' : 'Скачать расчет в PDF'}</span>
+                <span>Скачать расчет в PDF</span>
               </button>
             </div>
           </section>
