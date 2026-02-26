@@ -13,8 +13,13 @@ import { Showcase } from './components/Showcase';
 import { ChartSection } from './components/ChartSection';
 import { LeadModal } from './components/LeadModal';
 
+// Хелпер для форматирования чисел с пробелами
+const formatNumInput = (val) => {
+  if (val === '' || val === null || val === undefined) return '';
+  return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
 export default function App() {
-  // Блокируем изменение цифр при прокрутке тачпадом/колесиком мыши
   useEffect(() => {
     const handleWheel = (e) => {
       if (document.activeElement.type === 'number') {
@@ -661,12 +666,12 @@ export default function App() {
                           </div>
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Текущая рыночная цена (₽)</label>
-                            <input type="number" value={item.currentValue || ''} onChange={(e) => updateRE(item.id, 'currentValue', Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <input type="text" inputMode="numeric" value={formatNumInput(item.currentValue || '')} onChange={(e) => updateRE(item.id, 'currentValue', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                             <button className="text-[10px] text-[#987362] hover:underline mt-1 flex items-center"><ExternalLink className="w-3 h-3 mr-1" /> Запросить точную оценку</button>
                           </div>
                           <div className="sm:col-span-2">
                             <label className="text-xs text-[#666666] mb-1 block">Цена покупки (полная стоимость по ДДУ, ₽)</label>
-                            <input type="number" value={item.purchasePrice || ''} onChange={(e) => updateRE(item.id, 'purchasePrice', Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <input type="text" inputMode="numeric" value={formatNumInput(item.purchasePrice || '')} onChange={(e) => updateRE(item.id, 'purchasePrice', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                           
                           <div className="sm:col-span-2 space-y-4 bg-white p-4 border border-[#e5e5e5]">
@@ -703,15 +708,15 @@ export default function App() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pl-7 border-l-2 border-[#e5e5e5] mt-4">
                                 <div>
                                   <label className="text-xs text-[#666666] mb-1 block">Первый взнос (₽)</label>
-                                  <input type="number" value={item.initialPayment || ''} onChange={(e) => updateRE(item.id, 'initialPayment', Number(e.target.value))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                  <input type="text" inputMode="numeric" value={formatNumInput(item.initialPayment || '')} onChange={(e) => updateRE(item.id, 'initialPayment', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                                 </div>
                                 <div>
                                   <label className="text-xs text-[#666666] mb-1 block">Остаток долга (₽)</label>
-                                  <input type="number" value={item.loanBalance || ''} onChange={(e) => updateRE(item.id, 'loanBalance', Number(e.target.value))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                  <input type="text" inputMode="numeric" value={formatNumInput(item.loanBalance || '')} onChange={(e) => updateRE(item.id, 'loanBalance', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                                 </div>
                                 <div>
                                   <label className="text-xs text-[#666666] mb-1 block">Платеж в месяц (₽)</label>
-                                  <input type="number" value={item.mortgagePayment || ''} onChange={(e) => updateRE(item.id, 'mortgagePayment', Number(e.target.value))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                  <input type="text" inputMode="numeric" value={formatNumInput(item.mortgagePayment || '')} onChange={(e) => updateRE(item.id, 'mortgagePayment', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                                 </div>
                                 <div>
                                   <label className="text-xs text-[#666666] mb-1 block">Ставка (%)</label>
@@ -736,7 +741,7 @@ export default function App() {
                               {item.isRented && (
                                 <div className="pl-7 border-l-2 border-[#e5e5e5] mt-4">
                                   <label className="text-xs text-[#666666] mb-1 block">Доход от аренды в месяц (₽)</label>
-                                  <input type="number" value={item.rentIncome || ''} onChange={(e) => updateRE(item.id, 'rentIncome', Number(e.target.value))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                                  <input type="text" inputMode="numeric" value={formatNumInput(item.rentIncome || '')} onChange={(e) => updateRE(item.id, 'rentIncome', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-[#fafafa] border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                                 </div>
                               )}
                             </div>
@@ -837,7 +842,7 @@ export default function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Сумма на счету (₽)</label>
-                            <input type="number" value={dep.amount === 0 ? '' : dep.amount} onChange={(e) => updateDeposit(dep.id, 'amount', Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <input type="text" inputMode="numeric" value={formatNumInput(dep.amount === 0 ? '' : dep.amount)} onChange={(e) => updateDeposit(dep.id, 'amount', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Годовая ставка (%)</label>
@@ -903,7 +908,7 @@ export default function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Оценка портфеля (₽)</label>
-                            <input type="number" value={stock.amount === 0 ? '' : stock.amount} onChange={(e) => updateStock(stock.id, 'amount', Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <input type="text" inputMode="numeric" value={formatNumInput(stock.amount === 0 ? '' : stock.amount)} onChange={(e) => updateStock(stock.id, 'amount', Number(e.target.value.replace(/\D/g, '')))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Средняя доходность (%)</label>
@@ -966,7 +971,7 @@ export default function App() {
                         </div>
                         <div>
                           <label className="text-xs text-[#666666] mb-1 block">Наличные (₽)</label>
-                          <input type="number" value={asset.amount} onChange={(e) => setCash(e.target.value === '' ? 0 : Number(e.target.value))} className="w-full md:w-1/2 p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                          <input type="text" inputMode="numeric" value={formatNumInput(asset.amount)} onChange={(e) => setCash(e.target.value === '' ? 0 : Number(e.target.value.replace(/\D/g, '')))} className="w-full md:w-1/2 p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                         </div>
                         <div className="mt-6 pt-6 border-t border-[#e5e5e5] flex justify-end">
                           <button onClick={() => setIsEditingCash(false)} className="bg-[#987362] hover:bg-[#826152] text-white px-6 py-2.5 text-sm font-medium transition-colors">
@@ -1057,7 +1062,7 @@ export default function App() {
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-[#666666]">Стартовый капитал (₽)</label>
-                    <input type="number" value={startCapital} onChange={(e) => setStartCapital(e.target.value)} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                    <input type="text" inputMode="numeric" value={formatNumInput(startCapital)} onChange={(e) => setStartCapital(e.target.value.replace(/\D/g, ''))} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                     <p className="text-xs text-[#a0a0a0]">Извлеченный собственный капитал</p>
                   </div>
                   
@@ -1071,7 +1076,7 @@ export default function App() {
                   {!isAutoPayment && (
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-[#666666]">Комфортный платеж в месяц (₽)</label>
-                      <input type="number" value={monthlyPaymentLimit} onChange={(e) => setMonthlyPaymentLimit(e.target.value)} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                      <input type="text" inputMode="numeric" value={formatNumInput(monthlyPaymentLimit)} onChange={(e) => setMonthlyPaymentLimit(Number(e.target.value.replace(/\D/g, '')))} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                     </div>
                   )}
 
@@ -1087,7 +1092,7 @@ export default function App() {
 
                   <div className="space-y-2 pt-6 border-t border-[#e5e5e5]">
                     <label className="text-sm font-medium text-[#666666]">Желаемый пассивный доход в месяц (₽)</label>
-                    <input type="number" value={desiredPassiveIncome || ''} onChange={(e) => setDesiredPassiveIncome(e.target.value === '' ? '' : Number(e.target.value))} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                    <input type="text" inputMode="numeric" value={formatNumInput(desiredPassiveIncome || '')} onChange={(e) => setDesiredPassiveIncome(e.target.value === '' ? '' : Number(e.target.value.replace(/\D/g, '')))} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                     <p className="text-xs text-[#a0a0a0]">Цель через 15 лет</p>
                   </div>
                 </div>
