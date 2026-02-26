@@ -13,7 +13,6 @@ import { Showcase } from './components/Showcase';
 import { ChartSection } from './components/ChartSection';
 import { LeadModal } from './components/LeadModal';
 
-// Хелпер для форматирования чисел с пробелами
 const formatNumInput = (val) => {
   if (val === '' || val === null || val === undefined) return '';
   return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -223,25 +222,29 @@ export default function App() {
         let remainingCapital = currentCapital;
         let remainingPaymentLimit = isAutoPayment ? Infinity : safePaymentLimit;
 
-        if (isFamilyMortgage) {
-          const familyRate = (constants.rateFamily / 100) / 12;
-          const annuityFamily = (familyRate * Math.pow(1 + familyRate, totalMonths)) / (Math.pow(1 + familyRate, totalMonths) - 1);
+        // 1. Попытка купить по Семейной ипотеке (строго 20% ПВ)
+        if (isFamilyMortgage && remainingCapital > 0) {
+          const familyRateDecimal = (constants.rateFamily / 100) / 12;
+          const annuityFamily = (familyRateDecimal * Math.pow(1 + familyRateDecimal, totalMonths)) / (Math.pow(1 + familyRateDecimal, totalMonths) - 1);
 
-          const maxLoanByCap = (remainingCapital / constants.downPaymentPercent) * (1 - constants.downPaymentPercent);
-          const maxLoanByProgram = 12000000;
           const maxLoanByPayment = remainingPaymentLimit / annuityFamily;
+          const maxLoanByProgram = 12000000;
+          const approvedLoan = Math.min(maxLoanByPayment, maxLoanByProgram);
 
-          const familyLoan = Math.min(maxLoanByCap, maxLoanByProgram, maxLoanByPayment);
-          
-          if (familyLoan > 0) {
-            const familyPrice = familyLoan / (1 - constants.downPaymentPercent);
+          const maxPriceByLoan = approvedLoan / (1 - constants.downPaymentPercent);
+          const maxPriceByCapital = remainingCapital / constants.downPaymentPercent;
+
+          const familyPrice = Math.min(maxPriceByLoan, maxPriceByCapital);
+
+          if (familyPrice > 0) {
             const familyDP = familyPrice * constants.downPaymentPercent;
+            const familyLoan = familyPrice - familyDP;
             const familyPayment = familyLoan * annuityFamily;
 
             cycleProperties.push({
               price: familyPrice,
               loan: familyLoan,
-              rate: familyRate,
+              rate: familyRateDecimal,
               payment: familyPayment
             });
 
@@ -250,24 +253,27 @@ export default function App() {
           }
         }
 
+        // 2. Если остались деньги и лимит платежа, покупаем ВТОРУЮ по стандартной (строго 20% ПВ)
         if (remainingCapital > 0 && remainingPaymentLimit > 0) {
-          const standardRate = (constants.rateStandardFirst / 100) / 12;
-          const annuityStandard = (standardRate * Math.pow(1 + standardRate, totalMonths)) / (Math.pow(1 + standardRate, totalMonths) - 1);
+          const standardRateDecimal = (constants.rateStandardFirst / 100) / 12;
+          const annuityStandard = (standardRateDecimal * Math.pow(1 + standardRateDecimal, totalMonths)) / (Math.pow(1 + standardRateDecimal, totalMonths) - 1);
 
-          const maxLoanByCap = (remainingCapital / constants.downPaymentPercent) * (1 - constants.downPaymentPercent);
           const maxLoanByPayment = remainingPaymentLimit / annuityStandard;
+          
+          const maxPriceByLoan = maxLoanByPayment / (1 - constants.downPaymentPercent);
+          const maxPriceByCapital = remainingCapital / constants.downPaymentPercent;
 
-          const standardLoan = Math.min(maxLoanByCap, maxLoanByPayment);
+          const standardPrice = Math.min(maxPriceByLoan, maxPriceByCapital);
 
-          if (standardLoan > 0) {
-            const standardPrice = standardLoan / (1 - constants.downPaymentPercent);
+          if (standardPrice > 0) {
             const standardDP = standardPrice * constants.downPaymentPercent;
+            const standardLoan = standardPrice - standardDP;
             const standardPayment = standardLoan * annuityStandard;
 
             cycleProperties.push({
               price: standardPrice,
               loan: standardLoan,
-              rate: standardRate,
+              rate: standardRateDecimal,
               payment: standardPayment
             });
 
@@ -275,9 +281,11 @@ export default function App() {
           }
         }
 
+        // 3. Все неиспользованные копейки ложатся "под подушку" и не растут
         cycleUnusedCapital = Math.max(0, remainingCapital);
 
       } else {
+        // В следующих циклах капитал реинвестируется полностью как единая масса
         const nextRate = (constants.rateNextCycles / 100) / 12;
         const annuityNext = (nextRate * Math.pow(1 + nextRate, totalMonths)) / (Math.pow(1 + nextRate, totalMonths) - 1);
 
