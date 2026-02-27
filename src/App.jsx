@@ -66,30 +66,19 @@ export default function App() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [realEstate, setRealEstate] = useState([
-    {
-      id: 1, type: 'Квартира', city: 'Москва', purchaseYear: 2021, purchasePrice: 4199998, currentValue: 5800000,
-      hasMortgage: true, initialPayment: 420000, loanBalance: 3500000, mortgagePayment: 32000, mortgageRate: 10,
-      isUnderConstruction: false, isRented: true, rentIncome: 30000, isEditing: false
-    },
-    {
-      id: 2, type: 'Двушка', city: 'Краснодар', purchaseYear: 2022, purchasePrice: 5500000, currentValue: 6800000,
-      hasMortgage: true, initialPayment: 550000, loanBalance: 4800000, mortgagePayment: 38000, mortgageRate: 10,
-      isUnderConstruction: false, isRented: false, rentIncome: 0, isEditing: false
-    }
-  ]);
-
-  const [deposits, setDeposits] = useState([{ id: 1, amount: 1500000, rate: 14, isEditing: false }]);
-  const [cash, setCash] = useState(500000);
-  const [cashId, setCashId] = useState(3);
+  // Очистили все стартовые данные
+  const [realEstate, setRealEstate] = useState([]);
+  const [deposits, setDeposits] = useState([]);
+  const [cash, setCash] = useState(null);
+  const [cashId, setCashId] = useState(1);
   const [isEditingCash, setIsEditingCash] = useState(false);
-  const [stocks, setStocks] = useState([{ id: 1, amount: 800000, yield: 12, isEditing: false }]);
+  const [stocks, setStocks] = useState([]);
 
   const [startCapital, setStartCapital] = useState('');
   const [isAutoPayment, setIsAutoPayment] = useState(false);
-  const [monthlyPaymentLimit, setMonthlyPaymentLimit] = useState(100000);
+  const [monthlyPaymentLimit, setMonthlyPaymentLimit] = useState('');
   const [isFamilyMortgage, setIsFamilyMortgage] = useState(false);
-  const [desiredPassiveIncome, setDesiredPassiveIncome] = useState(200000);
+  const [desiredPassiveIncome, setDesiredPassiveIncome] = useState('');
 
   const { 
     auditResults, targetCapital, calculationResults, currentStrategyFinalReal, 
@@ -529,7 +518,7 @@ export default function App() {
                   {!isAutoPayment && (
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-[#666666]">Комфортный платеж в месяц (₽)</label>
-                      <NumberInput value={monthlyPaymentLimit} onChange={(val) => setMonthlyPaymentLimit(val)} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                      <NumberInput value={monthlyPaymentLimit} onChange={(val) => setMonthlyPaymentLimit(val)} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" placeholder="150 000" />
                     </div>
                   )}
 
@@ -543,12 +532,11 @@ export default function App() {
 
                   <div className="space-y-2 pt-6 border-t border-[#e5e5e5]">
                     <label className="text-sm font-medium text-[#666666]">Желаемый пассивный доход в месяц (₽)</label>
-                    <NumberInput value={desiredPassiveIncome} onChange={(val) => setDesiredPassiveIncome(val)} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                    <NumberInput value={desiredPassiveIncome} onChange={(val) => setDesiredPassiveIncome(val)} className="w-full text-xl font-medium p-3 bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" placeholder="300 000" />
                     <p className="text-xs text-[#a0a0a0]">Цель через 15 лет</p>
                   </div>
                 </div>
 
-                {/* --- УМНЫЕ ПОДСКАЗКИ АЛГОРИТМА --- */}
                 {firstCycleUnusedCapital > 0 && !isAutoPayment && (
                   <div className="mt-6 p-4 bg-orange-50 border border-orange-200 flex items-start space-x-3">
                     <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
@@ -572,8 +560,6 @@ export default function App() {
                     </div>
                   </div>
                 )}
-                {/* --------------------------------- */}
-
               </div>
 
               <ChartSection
