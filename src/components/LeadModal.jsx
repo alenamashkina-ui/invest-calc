@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, CheckCircle2 } from 'lucide-react';
 
-export const LeadModal = ({ isOpen, onClose, auditData }) => {
+// Хелпер для красивого форматирования денег в выписке
+const formatMoney = (val) => {
+  if (isNaN(val) || val === null || val === undefined) return "0 ₽";
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(val) + " ₽";
+};
+
+export const LeadModal = ({ isOpen, onClose, auditData, rawAssets, rawSettings }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [agreePrivacy, setAgreePrivacy] = useState(false);
@@ -12,7 +18,6 @@ export const LeadModal = ({ isOpen, onClose, auditData }) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Замораживаем фон (scroll), когда окно открыто
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -23,6 +28,58 @@ export const LeadModal = ({ isOpen, onClose, auditData }) => {
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // Генератор полного досье клиента
+  const generateDetailsText = () => {
+    let text = "=== ДЕТАЛИЗАЦИЯ АКТИВОВ ===\n\n";
+
+    if (rawAssets?.realEstate?.length > 0) {
+      text += "НЕДВИЖИМОСТЬ:\n";
+      rawAssets.realEstate.forEach((item, i) => {
+        text += `${i + 1}. ${item.type || 'Объект'} ${item.city ? `(${item.city})` : ''}\n`;
+        text += `   Куплено: ${item.purchaseYear} г. за ${formatMoney(item.purchasePrice)}\n`;
+        text += `   Текущая цена: ${formatMoney(item.currentValue)}\n`;
+        if (item.isUnderConstruction) text += `   Статус: В стройке\n`;
+        if (item.hasMortgage) {
+          text += `   Ипотека: долг ${formatMoney(item.loanBalance)}, платеж ${formatMoney(item.mortgagePayment)}/мес, ставка ${item.mortgageRate}%\n`;
+        }
+        if (item.isRented) {
+          text += `   Аренда: приносит ${formatMoney(item.rentIncome)}/мес\n`;
+        }
+        text += "\n";
+      });
+    }
+
+    if (rawAssets?.deposits?.length > 0) {
+      text += "ДЕПОЗИТЫ:\n";
+      rawAssets.deposits.forEach((item, i) => {
+        text += `${i + 1}. Сумма: ${formatMoney(item.amount)}, Ставка: ${item.rate}%\n`;
+      });
+      text += "\n";
+    }
+
+    if (rawAssets?.stocks?.length > 0) {
+      text += "АКЦИИ/ФОНДА:\n";
+      rawAssets.stocks.forEach((item, i) => {
+        text += `${i + 1}. Оценка: ${formatMoney(item.amount)}, Доходность: ${item.yield}%\n`;
+      });
+      text += "\n";
+    }
+
+    if (rawAssets?.cash > 0) {
+      text += `НАЛИЧНЫЕ: ${formatMoney(rawAssets.cash)}\n\n`;
+    }
+
+    text += "=== ПАРАМЕТРЫ СТРАТЕГИИ (ТОЧКА Б) ===\n";
+    text += `Семейная ипотека (6%): ${rawSettings?.isFamilyMortgage ? 'ЕСТЬ' : 'НЕТ'}\n`;
+    if (rawSettings?.isAutoPayment) {
+      text += `Комфортный платеж: АВТОРАСЧЕТ (инвест на все деньги)\n`;
+    } else {
+      text += `Комфортный платеж: ${formatMoney(rawSettings?.monthlyPaymentLimit)} в месяц\n`;
+    }
+
+    return text;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,7 +96,6 @@ export const LeadModal = ({ isOpen, onClose, auditData }) => {
     setIsLoading(true);
     setErrorMessage('');
     
-    // Формируем пакет данных для отправки в Тильду
     const leadData = {
       type: 'CALCULATOR_LEAD',
       name: name,
@@ -47,15 +103,14 @@ export const LeadModal = ({ isOpen, onClose, auditData }) => {
       capital: Math.round(auditData.startCapital || 0),
       inefficient: Math.round(auditData.inefficientCapital || 0),
       income: Math.round(auditData.desiredIncome || 0),
-      lostprofit: Math.round(auditData.lostProfit || 0)
+      lostprofit: Math.round(auditData.lostProfit || 0),
+      // Добавляем наше огромное сгенерированное досье
+      details: generateDetailsText()
     };
 
     try {
-      // Отправляем сообщение родительскому окну (Тильде)
-      // window.parent позволяет iframe общаться с главной страницей
       window.parent.postMessage(leadData, '*');
 
-      // Показываем успешную отправку
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
@@ -153,6 +208,5 @@ export const LeadModal = ({ isOpen, onClose, auditData }) => {
     </div>
   );
 
-  // Используем Portal для выноса модального окна в корень документа
   return createPortal(modalContent, document.body);
 };

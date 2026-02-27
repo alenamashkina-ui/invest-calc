@@ -607,7 +607,20 @@ export default function App() {
         </div>
       </div>
       
-      <LeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} auditData={{ startCapital: auditResults.totalPotentialCapital, inefficientCapital: auditResults.inefficientCapital, desiredIncome: desiredPassiveIncome, progressA: currentProgress, progressB: activeProgress, lostProfit: lostProfit }} />
+      <LeadModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        auditData={{ 
+          startCapital: auditResults.totalPotentialCapital, 
+          inefficientCapital: auditResults.inefficientCapital, 
+          desiredIncome: desiredPassiveIncome, 
+          progressA: currentProgress, 
+          progressB: activeProgress, 
+          lostProfit: lostProfit 
+        }} 
+        rawAssets={{ realEstate, deposits, stocks, cash }}
+        rawSettings={{ isAutoPayment, monthlyPaymentLimit, isFamilyMortgage }}
+      />
     </div>
   );
 }
