@@ -6,6 +6,30 @@ export const Showcase = () => {
     {
       id: 1,
       tag: "БИЗНЕС-КЛАСС",
+      city: "Санкт-Петербург, Васильевский остров",
+      title: "Студия, 20 кв.м",
+      price: "13 649 310 ₽",
+      dp: "2 743 512 ₽",
+      schedule: "1 928 ₽/мес до фев 2027, 28 243 ₽/мес до фев 2028. Далее переход на станд. ставку, рефинансируемся",
+      growth: "+55%",
+      profit: "~7 500 000 ₽",
+      image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      id: 2,
+      tag: "БИЗНЕС-КЛАСС",
+      city: "Москва, СЗАО",
+      title: "1-комн. квартира, 40 кв.м",
+      price: "26 553 100 ₽",
+      dp: "7 992 483 ₽",
+      schedule: "Платеж 123 484 ₽/мес на 7 лет. Далее переход на станд. ставку, рефинансируемся",
+      growth: "+49%",
+      profit: "~13 000 000 ₽",
+      image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      id: 3,
+      tag: "БИЗНЕС-КЛАСС",
       city: "Калининград, историческая часть",
       title: "Студия, 25 кв.м",
       price: "8 981 807 ₽",
@@ -14,30 +38,6 @@ export const Showcase = () => {
       growth: "+50%",
       profit: "~4 500 000 ₽",
       image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      id: 2,
-      tag: "ПРЕМИУМ",
-      city: "Москва, перспективный район ЗАО",
-      title: "Евро-2, 42 кв.м",
-      price: "14 500 000 ₽",
-      dp: "2 175 000 ₽",
-      schedule: "Транш 15% сейчас, 85% перед сдачей дома в 2027 г. (без удорожания стоимости)",
-      growth: "+49%",
-      profit: "~7 100 000 ₽",
-      image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      id: 3,
-      tag: "ДЛЯ ИНВЕСТИЦИЙ",
-      city: "Краснодар, новый деловой центр",
-      title: "Студия, 28 кв.м",
-      price: "6 400 000 ₽",
-      dp: "1 280 000 ₽",
-      schedule: "Доступна семейная ипотека 6%, комфортный платеж составит всего 30 700 ₽/мес",
-      growth: "+55%",
-      profit: "~3 520 000 ₽",
-      image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800"
     }
   ];
 
@@ -104,7 +104,6 @@ export const Showcase = () => {
         ))}
       </div>
 
-      {/* --- НОВЫЙ БЛОК ПРИЗЫВА В ТЕЛЕГРАМ --- */}
       <div className="mt-12 bg-white border border-[#987362]/30 p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group">
         <div className="absolute -right-20 -top-20 w-64 h-64 bg-[#fcf7f5] rounded-full blur-3xl opacity-50 pointer-events-none"></div>
         <div className="relative z-10 space-y-2 text-center md:text-left">
@@ -123,7 +122,6 @@ export const Showcase = () => {
           <ArrowRight className="w-4 h-4 ml-2" />
         </a>
       </div>
-      {/* -------------------------------------- */}
       
     </section>
   );
