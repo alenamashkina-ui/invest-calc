@@ -166,10 +166,12 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
+  // --- УМНАЯ ФУНКЦИЯ СОХРАНЕНИЯ (С разделением на ПК и Мобилку) ---
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     const element = document.getElementById('pdf-wrap');
 
+    // Прячем из отчета всё лишнее
     const noPrintElements = document.querySelectorAll('.no-print');
     const originalDisplays = [];
     noPrintElements.forEach((el, index) => {
@@ -178,7 +180,7 @@ export default function App() {
     });
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       const canvas = await html2canvas(element, {
         scale: 2, 
@@ -200,19 +202,57 @@ export default function App() {
       pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      while (heightLeft > 1) {
+      while (heightLeft > 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
-      pdf.save('Инвестиционный калькулятор.pdf');
+      // --- ОБРАБОТКА ДЛЯ МОБИЛОК И ДЕСКТОПА ---
+      const pdfBlob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const fileName = 'Инвестиционный_калькулятор.pdf';
+
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      if (isMobile && navigator.canShare) {
+        // На мобилке пытаемся вызвать меню "Поделиться"
+        try {
+          const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Инвестиционный расчет',
+            });
+          } else {
+            throw new Error("Sharing not supported");
+          }
+        } catch (e) {
+          // Если юзер закрыл меню или оно не сработало, просто качаем файл
+          const link = document.createElement('a');
+          link.href = pdfUrl;
+          link.download = fileName;
+          link.click();
+        }
+      } else {
+        // На компьютере (ПК) сразу качаем
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // Очищаем память
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
 
     } catch (error) {
       console.error("Ошибка при создании PDF:", error);
-      window.print();
+      alert("Не удалось сформировать документ. Попробуйте обновить страницу.");
     } finally {
+      // Возвращаем элементы интерфейса
       noPrintElements.forEach((el, index) => {
         el.style.display = originalDisplays[index];
       });
@@ -664,9 +704,8 @@ export default function App() {
              <div className="space-y-2">
                 <p className="font-medium text-[#222222]">Контакты</p>
                 <div className="flex justify-center md:justify-start space-x-4">
-                   <a href="#" className="text-xs hover:text-[#987362] transition-colors">Telegram</a>
-                   <a href="#" className="text-xs hover:text-[#987362] transition-colors">WhatsApp</a>
-                   <a href="#" className="text-xs hover:text-[#987362] transition-colors">Instagram</a>
+                   <a href="https://t.me/Soboleva_estate_bot" target="_blank" rel="noopener noreferrer" className="text-xs hover:text-[#987362] transition-colors">Telegram</a>
+                   <a href="https://www.instagram.com/soboleva_vik" target="_blank" rel="noopener noreferrer" className="text-xs hover:text-[#987362] transition-colors">Instagram</a>
                 </div>
              </div>
           </div>
