@@ -13,7 +13,6 @@ export const Showcase = () => {
       schedule: "1 928 ₽/мес до фев 2027, 28 243 ₽/мес до фев 2028. Далее переход на станд. ставку, рефинансируемся",
       growth: "+55%",
       profit: "~7 500 000 ₽",
-      // Ссылка на фото СПб
       image: "https://optim.tildacdn.com/tild3766-3436-4362-b365-363963643036/-/format/webp/IMG_3601.PNG.webp"
     },
     {
@@ -26,7 +25,6 @@ export const Showcase = () => {
       schedule: "Платеж 123 484 ₽/мес на 7 лет. Далее переход на станд. ставку, рефинансируемся",
       growth: "+49%",
       profit: "~13 000 000 ₽",
-      // Ссылка на фото Москва
       image: "https://optim.tildacdn.com/tild6662-3261-4464-a139-303133346563/-/format/webp/IMG_3602.PNG.webp"
     },
     {
@@ -39,7 +37,6 @@ export const Showcase = () => {
       schedule: "187 120 ₽ в мес. на 24 мес. На 25 мес. остаток или переход на ипотеку",
       growth: "+50%",
       profit: "~4 500 000 ₽",
-      // Ссылка на фото Калининград
       image: "https://optim.tildacdn.com/tild3131-6363-4430-a262-343464326638/-/format/webp/IMG_3603.PNG.webp"
     }
   ];
@@ -58,9 +55,17 @@ export const Showcase = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {lots.map(lot => (
-          <div key={lot.id} className="bg-white border border-[#e5e5e5] hover:shadow-lg transition-shadow duration-300 flex flex-col">
-            <div className="relative h-48 md:h-56 bg-[#f5f5f5]">
-              <img src={lot.image} alt={lot.title} className="w-full h-full object-cover" />
+          {/* Добавили класс group для отслеживания наведения на всю карточку */}
+          <div key={lot.id} className="bg-white border border-[#e5e5e5] hover:shadow-lg transition-shadow duration-300 flex flex-col group cursor-pointer">
+            
+            {/* Добавили overflow-hidden, чтобы картинка не вылезала за края при увеличении */}
+            <div className="relative h-48 md:h-56 bg-[#f5f5f5] overflow-hidden">
+              <img 
+                src={lot.image} 
+                alt={lot.title} 
+                {/* Добавили классы для плавного зума картинки (group-hover:scale-110) */}
+                className="w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110" 
+              />
               <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[10px] tracking-wider uppercase font-medium text-[#222222]">
                 {lot.tag}
               </div>
@@ -71,7 +76,8 @@ export const Showcase = () => {
                 <MapPin className="w-3.5 h-3.5 mr-1" />
                 <span>{lot.city}</span>
               </div>
-              <h3 className="font-tenor text-xl text-[#222222] mb-6">{lot.title}</h3>
+              {/* Добавили плавную смену цвета заголовка */}
+              <h3 className="font-tenor text-xl text-[#222222] mb-6 transition-colors duration-300 group-hover:text-[#987362]">{lot.title}</h3>
               
               <div className="mb-6">
                 <p className="text-[10px] text-[#a0a0a0] uppercase tracking-widest mb-1">Стоимость</p>
@@ -107,8 +113,9 @@ export const Showcase = () => {
         ))}
       </div>
 
-      <div className="mt-12 bg-white border border-[#987362]/30 p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group">
-        <div className="absolute -right-20 -top-20 w-64 h-64 bg-[#fcf7f5] rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+      {/* Блок Telegram тоже получил микро-анимации */}
+      <div className="mt-12 bg-white border border-[#987362]/30 p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group/cta">
+        <div className="absolute -right-20 -top-20 w-64 h-64 bg-[#fcf7f5] rounded-full blur-3xl opacity-50 pointer-events-none transition-transform duration-700 group-hover/cta:scale-150"></div>
         <div className="relative z-10 space-y-2 text-center md:text-left">
           <h4 className="font-tenor text-2xl md:text-3xl text-[#222222]">Больше инвестиционных предложений</h4>
           <p className="text-[#666666] text-sm md:text-base font-light max-w-2xl">
@@ -122,7 +129,7 @@ export const Showcase = () => {
           className="relative z-10 w-full md:w-auto inline-flex items-center justify-center bg-[#987362] hover:bg-[#826152] text-white px-8 py-4 text-sm font-medium transition-colors whitespace-nowrap"
         >
           <span>Перейти в Telegram</span>
-          <ArrowRight className="w-4 h-4 ml-2" />
+          <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover/cta:translate-x-1" />
         </a>
       </div>
       
