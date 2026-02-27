@@ -39,32 +39,36 @@ export const LeadModal = ({ isOpen, onClose, auditData }) => {
     setIsLoading(true);
     setErrorMessage('');
     
+    // Формируем пакет данных для отправки в Тильду
+    const leadData = {
+      type: 'CALCULATOR_LEAD',
+      name: name,
+      phone: phone,
+      capital: Math.round(auditData.startCapital || 0),
+      inefficient: Math.round(auditData.inefficientCapital || 0),
+      income: Math.round(auditData.desiredIncome || 0),
+      lostprofit: Math.round(auditData.lostProfit || 0)
+    };
+
     try {
-      const response = await fetch('/api/lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, ...auditData }),
-      });
+      // Отправляем сообщение родительскому окну (Тильде)
+      // window.parent позволяет iframe общаться с главной страницей
+      window.parent.postMessage(leadData, '*');
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setIsSuccess(true);
-        setTimeout(() => {
-          setIsSuccess(false);
-          setName('');
-          setPhone('');
-          setAgreePrivacy(false);
-          setAgreeData(false);
-          setAgreeMarketing(false);
-          onClose();
-        }, 3000);
-      } else {
-        setErrorMessage('Ошибка сервера. Попробуйте позже.');
-      }
+      // Показываем успешную отправку
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        setName('');
+        setPhone('');
+        setAgreePrivacy(false);
+        setAgreeData(false);
+        setAgreeMarketing(false);
+        onClose();
+      }, 3000);
     } catch (error) {
-      console.error('Ошибка отправки:', error);
-      setErrorMessage('Не удалось связаться с сервером.');
+      console.error('Ошибка моста передачи:', error);
+      setErrorMessage('Не удалось передать заявку.');
     } finally {
       setIsLoading(false);
     }
