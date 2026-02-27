@@ -9,14 +9,18 @@ import { getYearWord, getAlertStyles } from './utils/helpers';
 import { Showcase } from './components/Showcase';
 import { ChartSection } from './components/ChartSection';
 import { LeadModal } from './components/LeadModal';
-
-// Импортируем наш новый хук с математикой
 import { useCalculator } from './hooks/useCalculator';
 
-// Хелпер для форматирования чисел с пробелами
+// Хелпер для форматирования чисел в полях ввода
 const formatNumInput = (val) => {
   if (val === '' || val === null || val === undefined) return '';
   return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
+// Хелпер для красивого отображения денег с ₽
+const formatMoney = (val) => {
+  if (isNaN(val) || val === null || val === undefined) return "0 ₽";
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(val) + " ₽";
 };
 
 // Умный компонент ввода, который не ломает курсор
@@ -52,7 +56,7 @@ const NumberInput = ({ value, onChange, className, placeholder }) => {
 export default function App() {
   useEffect(() => {
     const handleWheel = (e) => {
-      if (document.activeElement.type === 'number') {
+      if (document.activeElement.type === 'text' || document.activeElement.type === 'number') {
         document.activeElement.blur();
       }
     };
@@ -87,7 +91,6 @@ export default function App() {
   const [isFamilyMortgage, setIsFamilyMortgage] = useState(false);
   const [desiredPassiveIncome, setDesiredPassiveIncome] = useState(200000);
 
-  // ПОДКЛЮЧАЕМ ВЫДЕЛЕННУЮ МАТЕМАТИКУ
   const { 
     auditResults, targetCapital, calculationResults, currentStrategyFinalReal, 
     chartData, currentProgress, activeProgress, lostProfit 
@@ -98,7 +101,7 @@ export default function App() {
   });
 
   useEffect(() => {
-    setStartCapital(Math.round(auditResults.totalPotentialCapital).toString());
+    setStartCapital(Math.round(auditResults.totalPotentialCapital));
   }, [auditResults.totalPotentialCapital]);
 
   const addRE = () => {
@@ -149,7 +152,7 @@ export default function App() {
             {lostAlternativeIncome > 0 && (
               <div className={`mt-3 pt-3 flex items-center justify-between border-t ${styles.border}`}>
                 <span className={`text-xs font-medium ${styles.text}`}>Потерянная альтернативная доходность</span>
-                <span className="text-sm font-bold text-red-600">-{formatNumInput(Math.round(lostAlternativeIncome))} ₽ / год</span>
+                <span className="text-sm font-bold text-red-600">-{formatMoney(Math.round(lostAlternativeIncome))} / год</span>
               </div>
             )}
           </div>
@@ -331,8 +334,8 @@ export default function App() {
                         <div>{renderAuditBadge(audit)}</div>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-                        <div><p className="text-xs text-[#666666] mb-1 font-light">Текущая стоимость</p><p className="font-medium text-xl">{formatNumInput(item.currentValue) + " ₽"}</p></div>
-                        <div><p className="text-xs text-[#666666] mb-1 font-light">Чистый капитал</p><p className="font-medium text-xl text-[#987362]">{formatNumInput(Math.round(Math.max(0, equity))) + " ₽"}</p></div>
+                        <div><p className="text-xs text-[#666666] mb-1 font-light">Текущая стоимость</p><p className="font-medium text-xl">{formatMoney(item.currentValue)}</p></div>
+                        <div><p className="text-xs text-[#666666] mb-1 font-light">Чистый капитал</p><p className="font-medium text-xl text-[#987362]">{formatMoney(Math.max(0, equity))}</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Срок владения</p><p className="font-medium text-xl">{yearsOwned + " " + getYearWord(yearsOwned)}</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Общий прирост</p><p className={`font-medium text-xl ${totalGrowthPercent > 0 ? "text-green-600" : (totalGrowthPercent < 0 ? "text-red-600" : "")}`}>{totalGrowthPercent > 0 ? "+" : ""}{totalGrowthPercent}%</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Рост стоимости (CAGR)</p><p className={`font-medium text-xl ${cagr > 0 ? "text-green-600" : "text-red-600"}`}>{cagr.toFixed(1) + "%"} <span className="text-xs text-[#a0a0a0] font-light">в год</span></p></div>
@@ -379,7 +382,7 @@ export default function App() {
                         {renderAuditBadge(audit)}
                       </div>
                       <div className="grid grid-cols-2 gap-6 mb-6">
-                        <div><p className="text-xs text-[#666666] mb-1 font-light">Текущий объем</p><p className="font-medium text-xl">{formatNumInput(dep.amount) + " ₽"}</p></div>
+                        <div><p className="text-xs text-[#666666] mb-1 font-light">Текущий объем</p><p className="font-medium text-xl">{formatMoney(dep.amount)}</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Доходность (ном.)</p><p className={`font-medium text-xl ${rate >= constants.inflation ? "text-green-600" : "text-red-600"}`}>{rate.toFixed(1) + "%"}</p></div>
                       </div>
                       {renderAuditAlert(audit, lostAlternativeIncome)}
@@ -422,7 +425,7 @@ export default function App() {
                         {renderAuditBadge(audit)}
                       </div>
                       <div className="grid grid-cols-2 gap-6 mb-6">
-                        <div><p className="text-xs text-[#666666] mb-1 font-light">Текущий объем</p><p className="font-medium text-xl">{formatNumInput(stock.amount) + " ₽"}</p></div>
+                        <div><p className="text-xs text-[#666666] mb-1 font-light">Текущий объем</p><p className="font-medium text-xl">{formatMoney(stock.amount)}</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Доходность (ном.)</p><p className={`font-medium text-xl ${yieldPct >= constants.inflation ? "text-green-600" : "text-red-600"}`}>{yieldPct.toFixed(1) + "%"}</p></div>
                       </div>
                       {renderAuditAlert(audit, lostAlternativeIncome)}
@@ -462,7 +465,7 @@ export default function App() {
                         {renderAuditBadge(audit)}
                       </div>
                       <div className="grid grid-cols-2 gap-6 mb-6">
-                        <div><p className="text-xs text-[#666666] mb-1 font-light">Текущий объем</p><p className="font-medium text-xl">{formatNumInput(asset.amount) + " ₽"}</p></div>
+                        <div><p className="text-xs text-[#666666] mb-1 font-light">Текущий объем</p><p className="font-medium text-xl">{formatMoney(asset.amount)}</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Доля в портфеле</p><p className="font-medium text-xl">{share.toFixed(1)}%</p></div>
                       </div>
                       {renderAuditAlert(audit, lostAlternativeIncome)}
@@ -480,16 +483,16 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <div>
                     <p className="text-sm text-white/80 mb-2 font-light">Ваш капитал сегодня</p>
-                    <p className="text-4xl md:text-5xl font-tenor tracking-tight text-white">{formatNumInput(Math.round(auditResults.totalPotentialCapital)) + " ₽"}</p>
+                    <p className="text-4xl md:text-5xl font-tenor tracking-tight text-white">{formatMoney(auditResults.totalPotentialCapital)}</p>
                     <p className="text-xs text-white/70 mt-3 font-light leading-relaxed">Это сумма, которую вы получите при продаже всех активов с учетом:<br/>– налога 13% (если срок владения менее 5 лет)<br/>– комиссии при продаже (в среднем 3.5%)<br/>– погашения остатка по ипотеке</p>
                   </div>
                   <div>
                     <p className="text-sm text-white/80 mb-2 font-light">Капитал, который можно усилить</p>
-                    <p className="text-4xl md:text-5xl font-tenor tracking-tight text-[#f5e6e0]">{formatNumInput(Math.round(auditResults.inefficientCapital)) + " ₽"}</p>
+                    <p className="text-4xl md:text-5xl font-tenor tracking-tight text-[#f5e6e0]">{formatMoney(auditResults.inefficientCapital)}</p>
                     <p className="text-xs text-white/70 mt-3 font-light leading-relaxed">Часть средств, которые сейчас работают ниже целевой доходности 13% и могут быть направлены в более эффективные инструменты.</p>
                     <div className="mt-4 pt-4 border-t border-white/10">
                        <p className="text-xs text-white/80 mb-1 font-light">Потенциал роста за 15 лет</p>
-                       <p className="text-xl font-medium text-white">{formatNumInput(Math.round(auditResults.inefficientFutureReal)) + " ₽"}</p>
+                       <p className="text-xl font-medium text-white">{formatMoney(auditResults.inefficientFutureReal)}</p>
                        <p className="text-xs text-white/60 mt-1 font-light">Если направить этот капитал в стратегию реинвестирования недвижимости (Сценарий Б)</p>
                     </div>
                   </div>
@@ -545,7 +548,7 @@ export default function App() {
               </div>
 
               <ChartSection
-                calculationResults={calculationResults} targetCapital={targetCapital} formatMoney={(val) => formatNumInput(Math.round(val)) + " ₽"}
+                calculationResults={calculationResults} targetCapital={targetCapital} formatMoney={formatMoney}
                 chartData={chartData} currentProgress={currentProgress} activeProgress={activeProgress} lostProfit={lostProfit}
               />
             </div>
@@ -563,15 +566,29 @@ export default function App() {
             <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto justify-center bg-[#987362] hover:bg-[#826152] text-white px-6 py-4 text-sm md:text-base font-medium transition-colors flex items-center space-x-2 no-print"><span className="text-center">Записаться на разбор</span><ArrowRight className="w-5 h-5 flex-shrink-0" /></button>
           </div>
 
-          <Showcase formatMoney={(val) => formatNumInput(Math.round(val)) + " ₽"} />
+          <Showcase formatMoney={formatMoney} />
 
           <footer className="pt-16 pb-8 border-t border-[#e5e5e5] mt-16 text-center md:text-left print-break-inside-avoid">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-[#666666]">
-               <div className="space-y-2 flex flex-col items-center md:items-start"><p className="font-medium text-[#222222]">ИП Соболева Виктория Викторовна</p><p className="text-xs">ОГРНИП: 321508100582522</p></div>
-               <div className="space-y-2"><p className="font-medium text-[#222222]">Документы</p><a href="#" className="text-xs hover:text-[#987362] transition-colors block">Политика конфиденциальности</a></div>
-               <div className="space-y-2"><p className="font-medium text-[#222222]">Контакты</p><div className="flex justify-center md:justify-start space-x-4"><a href="#" className="text-xs hover:text-[#987362] transition-colors">Telegram</a><a href="#" className="text-xs hover:text-[#987362] transition-colors">WhatsApp</a><a href="#" className="text-xs hover:text-[#987362] transition-colors">Instagram</a></div></div>
+               <div className="space-y-2 flex flex-col items-center md:items-start">
+                 <p className="font-medium text-[#222222]">ИП Соболева Виктория Викторовна</p>
+                 <p className="text-xs">ОГРНИП: 321508100582522</p>
+               </div>
+               <div className="space-y-2">
+                  <p className="font-medium text-[#222222]">Документы</p>
+                  <a href="#" className="text-xs hover:text-[#987362] transition-colors block">Политика конфиденциальности</a>
+               </div>
+               <div className="space-y-2">
+                  <p className="font-medium text-[#222222]">Контакты</p>
+                  <div className="flex justify-center md:justify-start space-x-4">
+                     <a href="#" className="text-xs hover:text-[#987362] transition-colors">Telegram</a>
+                     <a href="#" className="text-xs hover:text-[#987362] transition-colors">WhatsApp</a>
+                     <a href="#" className="text-xs hover:text-[#987362] transition-colors">Instagram</a>
+                  </div>
+               </div>
             </div>
           </footer>
+
         </div>
       </div>
       

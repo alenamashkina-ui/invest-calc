@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle2 } from 'lucide-react';
 
-export const LeadModal = ({ isOpen, onClose }) => {
+export const LeadModal = ({ isOpen, onClose, auditData }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [agreePrivacy, setAgreePrivacy] = useState(false);
@@ -10,6 +11,16 @@ export const LeadModal = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Замораживаем фон (scroll), когда окно открыто
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -32,7 +43,7 @@ export const LeadModal = ({ isOpen, onClose }) => {
       const response = await fetch('/api/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone }),
+        body: JSON.stringify({ name, phone, ...auditData }),
       });
 
       const data = await response.json();
@@ -49,7 +60,7 @@ export const LeadModal = ({ isOpen, onClose }) => {
           onClose();
         }, 3000);
       } else {
-        setErrorMessage('Ошибка сервера. Проверьте папку api/lead.js');
+        setErrorMessage('Ошибка сервера. Попробуйте позже.');
       }
     } catch (error) {
       console.error('Ошибка отправки:', error);
@@ -59,9 +70,8 @@ export const LeadModal = ({ isOpen, onClose }) => {
     }
   };
 
-  return (
-    // ВАЖНО: изменили центрирование на items-start и добавили отступ сверху pt-[10vh], плюс скролл overflow-y-auto
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-start pt-[10vh] pb-10 overflow-y-auto px-4 bg-[#1c1c1c]/60 backdrop-blur-sm no-print">
+  const modalContent = (
+    <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-start pt-[10vh] pb-10 overflow-y-auto px-4 bg-[#1c1c1c]/60 backdrop-blur-sm no-print" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%' }}>
       <div className="bg-white w-full max-w-md p-6 md:p-8 relative shadow-2xl shrink-0 my-auto">
         <button onClick={onClose} className="absolute top-4 right-4 text-[#a0a0a0] hover:text-[#222222] transition-colors">
           <X className="w-6 h-6" />
@@ -112,34 +122,15 @@ export const LeadModal = ({ isOpen, onClose }) => {
 
               <div className="space-y-3 mt-4 border-t border-[#e5e5e5] pt-4">
                 <label className="flex items-start space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={agreePrivacy} 
-                    onChange={(e) => setAgreePrivacy(e.target.checked)} 
-                    className="mt-0.5 w-4 h-4 accent-[#987362] cursor-pointer" 
-                  />
-                  <span className="text-xs text-[#666666]">
-                    Согласен с <a href="#" target="_blank" rel="noopener noreferrer" className="text-[#987362] hover:underline underline-offset-2">политикой конфиденциальности</a>
-                  </span>
+                  <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#987362] cursor-pointer" />
+                  <span className="text-xs text-[#666666]">Согласен с <a href="#" target="_blank" className="text-[#987362] hover:underline">политикой конфиденциальности</a></span>
                 </label>
                 <label className="flex items-start space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={agreeData} 
-                    onChange={(e) => setAgreeData(e.target.checked)} 
-                    className="mt-0.5 w-4 h-4 accent-[#987362] cursor-pointer" 
-                  />
-                  <span className="text-xs text-[#666666]">
-                    Даю согласие на <a href="#" target="_blank" rel="noopener noreferrer" className="text-[#987362] hover:underline underline-offset-2">обработку персональных данных</a>
-                  </span>
+                  <input type="checkbox" checked={agreeData} onChange={(e) => setAgreeData(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#987362] cursor-pointer" />
+                  <span className="text-xs text-[#666666]">Даю согласие на <a href="#" target="_blank" className="text-[#987362] hover:underline">обработку данных</a></span>
                 </label>
                 <label className="flex items-start space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={agreeMarketing} 
-                    onChange={(e) => setAgreeMarketing(e.target.checked)} 
-                    className="mt-0.5 w-4 h-4 accent-[#987362] cursor-pointer" 
-                  />
+                  <input type="checkbox" checked={agreeMarketing} onChange={(e) => setAgreeMarketing(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#987362] cursor-pointer" />
                   <span className="text-xs text-[#666666]">Согласен на отправку маркетинговых сообщений</span>
                 </label>
               </div>
@@ -147,7 +138,7 @@ export const LeadModal = ({ isOpen, onClose }) => {
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="w-full bg-[#987362] hover:bg-[#826152] text-white py-3.5 text-sm font-medium transition-colors mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-[#987362] hover:bg-[#826152] text-white py-3.5 text-sm font-medium transition-colors mt-6 disabled:opacity-50"
               >
                 {isLoading ? 'Отправка...' : 'Записаться'}
               </button>
@@ -157,4 +148,7 @@ export const LeadModal = ({ isOpen, onClose }) => {
       </div>
     </div>
   );
+
+  // Используем Portal для выноса модального окна в корень документа
+  return createPortal(modalContent, document.body);
 };
