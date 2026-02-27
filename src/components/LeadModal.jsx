@@ -182,15 +182,15 @@ export const LeadModal = ({ isOpen, onClose, auditData, rawAssets, rawSettings }
               <div className="space-y-3 mt-4 border-t border-[#e5e5e5] pt-4">
                 <label className="flex items-start space-x-3 cursor-pointer">
                   <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#987362] cursor-pointer" />
-                  <span className="text-xs text-[#666666]">Согласен с <a href="#" target="_blank" className="text-[#987362] hover:underline">политикой конфиденциальности</a></span>
+                  <span className="text-xs text-[#666666]">Согласен с <a href="https://soboleva-nedvizhmost.ru/policy" target="_blank" rel="noopener noreferrer" className="text-[#987362] hover:underline">политикой конфиденциальности</a></span>
                 </label>
                 <label className="flex items-start space-x-3 cursor-pointer">
                   <input type="checkbox" checked={agreeData} onChange={(e) => setAgreeData(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#987362] cursor-pointer" />
-                  <span className="text-xs text-[#666666]">Даю согласие на <a href="#" target="_blank" className="text-[#987362] hover:underline">обработку данных</a></span>
+                  <span className="text-xs text-[#666666]">Даю согласие на <a href="https://soboleva-nedvizhmost.ru/person" target="_blank" rel="noopener noreferrer" className="text-[#987362] hover:underline">обработку персональных данных</a></span>
                 </label>
                 <label className="flex items-start space-x-3 cursor-pointer">
                   <input type="checkbox" checked={agreeMarketing} onChange={(e) => setAgreeMarketing(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#987362] cursor-pointer" />
-                  <span className="text-xs text-[#666666]">Согласен на отправку маркетинговых сообщений</span>
+                  <span className="text-xs text-[#666666]">Согласен на <a href="https://soboleva-nedvizhmost.ru/reklama" target="_blank" rel="noopener noreferrer" className="text-[#987362] hover:underline">получение рекламных сообщений</a></span>
                 </label>
               </div>
 

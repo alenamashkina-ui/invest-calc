@@ -166,12 +166,10 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
-  // --- БРОНЕБОЙНАЯ ФУНКЦИЯ СКАЧИВАНИЯ PDF ---
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     const element = document.getElementById('pdf-wrap');
 
-    // Прячем из отчета всё лишнее: кнопки, витрину с лотами (решает проблему с фото), футер
     const noPrintElements = document.querySelectorAll('.no-print');
     const originalDisplays = [];
     noPrintElements.forEach((el, index) => {
@@ -180,7 +178,6 @@ export default function App() {
     });
 
     try {
-      // Пауза 100мс, чтобы браузер успел скрыть элементы
       await new Promise(resolve => setTimeout(resolve, 100));
 
       const canvas = await html2canvas(element, {
@@ -200,11 +197,9 @@ export default function App() {
       let heightLeft = imgHeight;
       let position = 0;
 
-      // Первая страница
       pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      // Дополнительные страницы, если отчет длинный
       while (heightLeft > 1) {
         position = heightLeft - imgHeight;
         pdf.addPage();
@@ -216,11 +211,8 @@ export default function App() {
 
     } catch (error) {
       console.error("Ошибка при создании PDF:", error);
-      // БЕЗОТКАЗНЫЙ ПЛАН Б: Если айфон или защищенный браузер блокируют создание файла, 
-      // мгновенно вызываем стандартную печать, чтобы клиент 100% получил результат.
       window.print();
     } finally {
-      // Возвращаем все скрытые элементы обратно на сайт
       noPrintElements.forEach((el, index) => {
         el.style.display = originalDisplays[index];
       });
@@ -242,7 +234,6 @@ export default function App() {
 
       <div className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 pb-20 overflow-x-hidden">
         
-        {/* === БЛОК ДЛЯ PDF (теперь в него попадает только самое важное) === */}
         <div className="max-w-6xl mx-auto space-y-16 bg-[#fafafa]" id="pdf-wrap">
           <header className="text-center space-y-4 pt-10 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-tenor tracking-tight">Инвестиционный калькулятор</h1>
@@ -645,9 +636,7 @@ export default function App() {
           </section>
 
         </div>
-        {/* === КОНЕЦ БЛОКА ДЛЯ PDF === */}
         
-        {/* Эти блоки скрыты из PDF с помощью класса no-print */}
         <div className="bg-[#1c1c1c] p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 w-full max-w-6xl mx-auto mt-16 no-print">
           <div className="space-y-2">
             <p className="text-xl md:text-3xl font-tenor text-white tracking-tight leading-snug">Калькулятор показывает потенциал</p>
@@ -668,7 +657,9 @@ export default function App() {
              </div>
              <div className="space-y-2">
                 <p className="font-medium text-[#222222]">Документы</p>
-                <a href="#" className="text-xs hover:text-[#987362] transition-colors block">Политика конфиденциальности</a>
+                <a href="https://soboleva-nedvizhmost.ru/policy" target="_blank" rel="noopener noreferrer" className="text-xs hover:text-[#987362] transition-colors block mb-1">Политика конфиденциальности</a>
+                <a href="https://soboleva-nedvizhmost.ru/person" target="_blank" rel="noopener noreferrer" className="text-xs hover:text-[#987362] transition-colors block mb-1">Обработка персональных данных</a>
+                <a href="https://soboleva-nedvizhmost.ru/reklama" target="_blank" rel="noopener noreferrer" className="text-xs hover:text-[#987362] transition-colors block">Согласие на получение рекламы</a>
              </div>
              <div className="space-y-2">
                 <p className="font-medium text-[#222222]">Контакты</p>
