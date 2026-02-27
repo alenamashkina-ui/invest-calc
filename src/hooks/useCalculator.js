@@ -5,6 +5,12 @@ import {
   getDepositAudit, getCashAudit 
 } from '../utils/helpers';
 
+// Бронебойная функция: понимает и "15", и "0.15"
+const getRateDecimal = (rateVal) => {
+  const num = Number(rateVal) || 0;
+  return (num >= 1 ? num / 100 : num) / 12;
+};
+
 export const useCalculator = ({
   realEstate, deposits, stocks, cash, 
   startCapital, isAutoPayment, monthlyPaymentLimit, 
@@ -137,19 +143,20 @@ export const useCalculator = ({
     }];
     const milestones = [];
 
-    // Вычисляем "идеальный платеж", если вложить ВЕСЬ капитал под 20%
+    // Вычисляем идеальный платеж (если вложить все деньги под 20%)
     let optimalFullPayment = 0;
     let capForOpt = safeStartCapital;
     const optMonths = 360;
+    
     if (isFamilyMortgage && capForOpt > 0) {
-      const fRate = (constants.rateFamily / 100) / 12;
+      const fRate = getRateDecimal(constants.rateFamily);
       const annF = (fRate * Math.pow(1 + fRate, optMonths)) / (Math.pow(1 + fRate, optMonths) - 1);
-      const usedDP = Math.min(capForOpt, 3000000); // макс ПВ для семейной
+      const usedDP = Math.min(capForOpt, 3000000); 
       optimalFullPayment += (usedDP / constants.downPaymentPercent * (1 - constants.downPaymentPercent)) * annF;
       capForOpt -= usedDP;
     }
     if (capForOpt > 0) {
-      const sRate = (constants.rateStandardFirst / 100) / 12;
+      const sRate = getRateDecimal(constants.rateStandardFirst);
       const annS = (sRate * Math.pow(1 + sRate, optMonths)) / (Math.pow(1 + sRate, optMonths) - 1);
       optimalFullPayment += (capForOpt / constants.downPaymentPercent * (1 - constants.downPaymentPercent)) * annS;
     }
@@ -167,7 +174,7 @@ export const useCalculator = ({
 
       if (cycle === 0) {
         if (isFamilyMortgage && remainingCapital > 0 && remainingPaymentLimit > 0) {
-          const familyRateDecimal = (constants.rateFamily / 100) / 12;
+          const familyRateDecimal = getRateDecimal(constants.rateFamily);
           const annuityFamily = (familyRateDecimal * Math.pow(1 + familyRateDecimal, totalMonths)) / (Math.pow(1 + familyRateDecimal, totalMonths) - 1);
           const maxLoanByPayment = remainingPaymentLimit / annuityFamily;
           const maxLoanByProgram = 12000000;
@@ -187,7 +194,7 @@ export const useCalculator = ({
         }
 
         if (remainingCapital > 0 && remainingPaymentLimit > 0) {
-          const standardRateDecimal = (constants.rateStandardFirst / 100) / 12;
+          const standardRateDecimal = getRateDecimal(constants.rateStandardFirst);
           const annuityStandard = (standardRateDecimal * Math.pow(1 + standardRateDecimal, totalMonths)) / (Math.pow(1 + standardRateDecimal, totalMonths) - 1);
           const maxLoanByPayment = remainingPaymentLimit / annuityStandard;
           const maxPriceByLoan = maxLoanByPayment / (1 - constants.downPaymentPercent);
@@ -208,7 +215,7 @@ export const useCalculator = ({
 
       } else {
         if (remainingCapital > 0 && (isAutoPayment || safePaymentLimit > 0)) {
-          const nextRateDecimal = (constants.rateNextCycles / 100) / 12;
+          const nextRateDecimal = getRateDecimal(constants.rateNextCycles);
           const annuityNext = (nextRateDecimal * Math.pow(1 + nextRateDecimal, totalMonths)) / (Math.pow(1 + nextRateDecimal, totalMonths) - 1);
           const price = remainingCapital / constants.downPaymentPercent;
           const dp = remainingCapital;
@@ -280,7 +287,7 @@ export const useCalculator = ({
       const rIncome = Number(item.rentIncome) || 0;
 
       const futureValue = cValue * Math.pow(1 + constants.basePropertyGrowth, 15);
-      const remainingDebt = item.hasMortgage ? getRemainingBalance(lBalance, mRate, mPayment, 15 * 12) : 0;
+      const remainingDebt = item.hasMortgage ? getRemainingBalance(lBalance, mRate >= 1 ? mRate : mRate * 100, mPayment, 15 * 12) : 0;
       const futureCommission = futureValue * constants.commissionPercent;
       const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? rIncome : 0) - (item.hasMortgage ? mPayment : 0);
       const accumulatedRent = netMonthlyRent * 12 * 15;
@@ -308,7 +315,7 @@ export const useCalculator = ({
         const rIncome = Number(item.rentIncome) || 0;
 
         const futureValue = cValue * Math.pow(1 + constants.basePropertyGrowth, year);
-        const remainingDebt = item.hasMortgage ? getRemainingBalance(lBalance, mRate, mPayment, year * 12) : 0;
+        const remainingDebt = item.hasMortgage ? getRemainingBalance(lBalance, mRate >= 1 ? mRate : mRate * 100, mPayment, year * 12) : 0;
         const futureCommission = futureValue * constants.commissionPercent;
         const netMonthlyRent = (!item.isUnderConstruction && item.isRented ? rIncome : 0) - (item.hasMortgage ? mPayment : 0);
         const accumulatedRent = netMonthlyRent * 12 * year;

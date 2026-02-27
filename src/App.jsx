@@ -553,9 +553,9 @@ export default function App() {
                   <div className="mt-6 p-4 bg-orange-50 border border-orange-200 flex items-start space-x-3">
                     <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-orange-900 mb-1">Часть капитала не работает</p>
+                      <p className="text-sm font-medium text-orange-900 mb-1">Часть капитала лежит без дела</p>
                       <p className="text-xs text-orange-800 leading-relaxed">
-                        Из-за лимита по платежу {formatMoney(firstCycleUnusedCapital)} лежат «под подушкой» и сгорают от инфляции. Включите авторасчет платежа (потребуется ~{formatMoney(optimalFullPayment)}/мес), чтобы вложить 100% денег под 20% взноса и увидеть максимальный рост.
+                        Из-за ограничения по ежемесячному платежу {formatMoney(firstCycleUnusedCapital)} не пошли в дело и просто сгорают от инфляции. Попробуйте включить авторасчет (потребуется платеж ~{formatMoney(optimalFullPayment)}/мес), чтобы вложить все 100% денег под 20% взноса. Вы увидите, как график улетит в космос!
                       </p>
                     </div>
                   </div>
