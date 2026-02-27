@@ -68,6 +68,7 @@ export default function App() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [pdfReadyObj, setPdfReadyObj] = useState(null); // Новый стейт для зеленой кнопки
 
   const [realEstate, setRealEstate] = useState([]);
   const [deposits, setDeposits] = useState([]);
@@ -166,30 +167,36 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
-  // --- УМНАЯ ФУНКЦИЯ СОХРАНЕНИЯ (С разделением на ПК и Мобилку) ---
-  const handleDownloadPDF = async () => {
+  // --- ШАГ 1: Асинхронная подготовка PDF (Без вызова скачивания, чтобы не злить айфон) ---
+  const handlePreparePDF = async () => {
     setIsDownloading(true);
+    setPdfReadyObj(null);
     const element = document.getElementById('pdf-wrap');
 
-    // Прячем из отчета всё лишнее
-    const noPrintElements = document.querySelectorAll('.no-print');
-    const originalDisplays = [];
-    noPrintElements.forEach((el, index) => {
-      originalDisplays[index] = el.style.display;
-      el.style.display = 'none';
-    });
-
     try {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const canvas = await html2canvas(element, {
-        scale: 2, 
+        scale: 1.5, // Уменьшил с 2 до 1.5, чтобы мобилки не "выплевывали" ошибку памяти
         useCORS: true,
+        allowTaint: true,
         backgroundColor: '#fafafa',
-        windowWidth: 1200 
+        windowWidth: 1200,
+        onclone: (documentClone) => {
+          // Прячем всё, что не нужно в отчете
+          const noPrintElements = documentClone.querySelectorAll('.no-print');
+          noPrintElements.forEach(el => el.style.display = 'none');
+          
+          // Показываем секретный блок с контактами, который мы добавим в PDF
+          const contactsBlock = documentClone.getElementById('pdf-contacts');
+          if (contactsBlock) {
+            contactsBlock.style.display = 'block';
+            contactsBlock.classList.remove('hidden');
+          }
+        }
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -209,54 +216,50 @@ export default function App() {
         heightLeft -= pageHeight;
       }
 
-      // --- ОБРАБОТКА ДЛЯ МОБИЛОК И ДЕСКТОПА ---
+      // Создаем файл и сохраняем его в память
       const pdfBlob = pdf.output('blob');
       const pdfUrl = URL.createObjectURL(pdfBlob);
-      const fileName = 'Инвестиционный_калькулятор.pdf';
+      const file = new File([pdfBlob], 'Инвестиционный_калькулятор.pdf', { type: 'application/pdf' });
 
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-      if (isMobile && navigator.canShare) {
-        // На мобилке пытаемся вызвать меню "Поделиться"
-        try {
-          const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'Инвестиционный расчет',
-            });
-          } else {
-            throw new Error("Sharing not supported");
-          }
-        } catch (e) {
-          // Если юзер закрыл меню или оно не сработало, просто качаем файл
-          const link = document.createElement('a');
-          link.href = pdfUrl;
-          link.download = fileName;
-          link.click();
-        }
-      } else {
-        // На компьютере (ПК) сразу качаем
-        const link = document.createElement('a');
-        link.href = pdfUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-
-      // Очищаем память
-      setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
+      setPdfReadyObj({ url: pdfUrl, file });
 
     } catch (error) {
       console.error("Ошибка при создании PDF:", error);
-      alert("Не удалось сформировать документ. Попробуйте обновить страницу.");
+      alert("Не удалось собрать данные. Пожалуйста, перезагрузите страницу.");
     } finally {
-      // Возвращаем элементы интерфейса
-      noPrintElements.forEach((el, index) => {
-        el.style.display = originalDisplays[index];
-      });
       setIsDownloading(false);
+    }
+  };
+
+  // --- ШАГ 2: Синхронное скачивание/шеринг по клику человека ---
+  const handleSavePDF = async () => {
+    if (!pdfReadyObj) return;
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile && navigator.canShare) {
+      try {
+        if (navigator.canShare({ files: [pdfReadyObj.file] })) {
+          await navigator.share({
+            files: [pdfReadyObj.file],
+            title: 'Инвестиционный расчет',
+          });
+        } else {
+          throw new Error("Share not supported");
+        }
+      } catch (error) {
+        // Если клиент отменил шеринг или айфон заблокировал, просто скачиваем
+        const link = document.createElement('a');
+        link.href = pdfReadyObj.url;
+        link.download = 'Инвестиционный_калькулятор.pdf';
+        link.click();
+      }
+    } else {
+      // Компьютер: мгновенное скачивание файла
+      const link = document.createElement('a');
+      link.href = pdfReadyObj.url;
+      link.download = 'Инвестиционный_калькулятор.pdf';
+      link.click();
     }
   };
 
@@ -274,7 +277,8 @@ export default function App() {
 
       <div className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 pb-20 overflow-x-hidden">
         
-        <div className="max-w-6xl mx-auto space-y-16 bg-[#fafafa]" id="pdf-wrap">
+        {/* === БЛОК ДЛЯ PDF (теперь в него попадает только самое важное) === */}
+        <div className="max-w-6xl mx-auto space-y-16 bg-[#fafafa] relative" id="pdf-wrap">
           <header className="text-center space-y-4 pt-10 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-tenor tracking-tight">Инвестиционный калькулятор</h1>
             <p className="text-lg text-[#666666] font-light max-w-2xl mx-auto px-4">Диагностика ваших активов и план максимизации роста капитала</p>
@@ -284,7 +288,7 @@ export default function App() {
             <p className="font-medium text-[#222222] mb-4 text-base">Этот калькулятор показывает базовую модель масштабирования капитала через недвижимость</p>
             <p className="mb-4">Стратегия основана на четырёх ключевых принципах:</p>
             <div className="space-y-4">
-              <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>рост стоимости ликвидных объектов, особенно при входе в проекты на старте продаж</p></div>
+              <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>рост стоимости ликвидных объектов, особенно при входе в projects на старте продаж</p></div>
               <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>использование кредитного плеча – покупка с ипотекой при первоначальном взносе от 20%</p></div>
               <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>продажа объекта на пике роста цены, как правило через 4–5 лет владения</p></div>
               <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>эффект сложного процента за счёт последовательного реинвестирования капитала</p></div>
@@ -663,19 +667,42 @@ export default function App() {
               />
             </div>
 
+            {/* === НОВЫЙ БЛОК КОНТАКТОВ, КОТОРЫЙ ПОЯВИТСЯ ТОЛЬКО В PDF === */}
+            <div id="pdf-contacts" className="hidden mt-20 pt-10 border-t-2 border-[#987362] text-[#222222]">
+              <h3 className="font-tenor text-3xl mb-8">Агентство недвижимости «Надо брать»</h3>
+              <div className="space-y-4 text-base font-light">
+                <p><span className="font-medium">Сайт:</span> soboleva-nedvizhmost.ru</p>
+                <p><span className="font-medium">Телефон:</span> +7 (991) 775-20-76</p>
+                <p><span className="font-medium">Телеграм-канал:</span> @mne_vse_nado</p>
+                <p><span className="font-medium">Instagram:</span> @soboleva_vik</p>
+              </div>
+            </div>
+
+            {/* УМНАЯ ДВУХШАГОВАЯ КНОПКА СКАЧИВАНИЯ */}
             <div className="mt-10 pt-10 border-t border-[#e5e5e5] flex justify-center no-print">
-              <button 
-                onClick={handleDownloadPDF} 
-                disabled={isDownloading}
-                className="bg-white hover:bg-[#fafafa] text-[#222222] border border-[#e5e5e5] hover:border-[#987362] px-8 py-4 text-sm font-medium transition-all flex items-center space-x-2 disabled:opacity-50"
-              >
-                <Download className="w-5 h-5 text-[#987362]" />
-                <span>{isDownloading ? 'Формирование отчета...' : 'Скачать расчет в PDF'}</span>
-              </button>
+              {pdfReadyObj ? (
+                <button 
+                  onClick={handleSavePDF} 
+                  className="bg-[#28a745] hover:bg-[#218838] text-white px-8 py-4 text-sm font-medium transition-all flex items-center space-x-2 shadow-lg shadow-green-500/30"
+                >
+                  <Download className="w-5 h-5" />
+                  <span>Документ готов! Сохранить</span>
+                </button>
+              ) : (
+                <button 
+                  onClick={handlePreparePDF} 
+                  disabled={isDownloading}
+                  className="bg-white hover:bg-[#fafafa] text-[#222222] border border-[#e5e5e5] hover:border-[#987362] px-8 py-4 text-sm font-medium transition-all flex items-center space-x-2 disabled:opacity-50"
+                >
+                  <Download className="w-5 h-5 text-[#987362]" />
+                  <span>{isDownloading ? 'Формирование отчета...' : 'Скачать расчет в PDF'}</span>
+                </button>
+              )}
             </div>
           </section>
 
         </div>
+        {/* === КОНЕЦ БЛОКА ДЛЯ PDF === */}
         
         <div className="bg-[#1c1c1c] p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 w-full max-w-6xl mx-auto mt-16 no-print">
           <div className="space-y-2">
