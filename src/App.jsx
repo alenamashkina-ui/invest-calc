@@ -171,7 +171,7 @@ export default function App() {
     setIsDownloading(true);
     const element = document.getElementById('pdf-wrap');
 
-    // Прячем кнопки интерфейса перед "снимком"
+    // Прячем из отчета всё лишнее: кнопки, витрину с лотами (решает проблему с фото), футер
     const noPrintElements = document.querySelectorAll('.no-print');
     const originalDisplays = [];
     noPrintElements.forEach((el, index) => {
@@ -180,19 +180,17 @@ export default function App() {
     });
 
     try {
-      // Даем браузеру миллисекунду, чтобы скрыть кнопки
+      // Пауза 100мс, чтобы браузер успел скрыть элементы
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Создаем скриншот (allowTaint и useCORS решают проблему с картинками Тильды)
       const canvas = await html2canvas(element, {
-        scale: 1.5, // Слегка уменьшили масштаб, чтобы не вылетало на айфонах
+        scale: 2, 
         useCORS: true,
-        allowTaint: true,
         backgroundColor: '#fafafa',
-        windowWidth: 1200 // Всегда делаем широкий, красивый десктопный вид
+        windowWidth: 1200 
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
       
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -206,8 +204,8 @@ export default function App() {
       pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      // Если отчет длинный, добавляем еще страницы
-      while (heightLeft > 0) {
+      // Дополнительные страницы, если отчет длинный
+      while (heightLeft > 1) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
@@ -218,9 +216,11 @@ export default function App() {
 
     } catch (error) {
       console.error("Ошибка при создании PDF:", error);
-      alert("Не удалось скачать файл. Убедитесь, что у вас стабильный интернет.");
+      // БЕЗОТКАЗНЫЙ ПЛАН Б: Если айфон или защищенный браузер блокируют создание файла, 
+      // мгновенно вызываем стандартную печать, чтобы клиент 100% получил результат.
+      window.print();
     } finally {
-      // Возвращаем кнопки обратно
+      // Возвращаем все скрытые элементы обратно на сайт
       noPrintElements.forEach((el, index) => {
         el.style.display = originalDisplays[index];
       });
@@ -242,7 +242,7 @@ export default function App() {
 
       <div className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 pb-20 overflow-x-hidden">
         
-        {/* === БЛОК ДЛЯ PDF === */}
+        {/* === БЛОК ДЛЯ PDF (теперь в него попадает только самое важное) === */}
         <div className="max-w-6xl mx-auto space-y-16 bg-[#fafafa]" id="pdf-wrap">
           <header className="text-center space-y-4 pt-10 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-tenor tracking-tight">Инвестиционный калькулятор</h1>
@@ -639,43 +639,48 @@ export default function App() {
                 className="bg-white hover:bg-[#fafafa] text-[#222222] border border-[#e5e5e5] hover:border-[#987362] px-8 py-4 text-sm font-medium transition-all flex items-center space-x-2 disabled:opacity-50"
               >
                 <Download className="w-5 h-5 text-[#987362]" />
-                <span>{isDownloading ? 'Формирование PDF...' : 'Скачать расчет в PDF'}</span>
+                <span>{isDownloading ? 'Формирование отчета...' : 'Скачать расчет в PDF'}</span>
               </button>
             </div>
           </section>
 
-          <div className="bg-[#1c1c1c] p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 w-full no-print">
-            <div className="space-y-2">
-              <p className="text-xl md:text-3xl font-tenor text-white tracking-tight leading-snug">Калькулятор показывает потенциал</p>
-              <p className="text-[#a0a0a0] text-sm md:text-xl font-light">Консультация превращает его в стратегию</p>
-            </div>
-            <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto justify-center bg-[#987362] hover:bg-[#826152] text-white px-6 py-4 text-sm md:text-base font-medium transition-colors flex items-center space-x-2"><span className="text-center">Записаться на разбор</span><ArrowRight className="w-5 h-5 flex-shrink-0" /></button>
-          </div>
-
-          <Showcase formatMoney={formatMoney} />
-
-          <footer className="pt-16 pb-8 border-t border-[#e5e5e5] mt-16 text-center md:text-left">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-[#666666]">
-               <div className="space-y-2 flex flex-col items-center md:items-start">
-                 <p className="font-medium text-[#222222]">ИП Соболева Виктория Викторовна</p>
-                 <p className="text-xs">ОГРНИП: 321508100582522</p>
-               </div>
-               <div className="space-y-2">
-                  <p className="font-medium text-[#222222]">Документы</p>
-                  <a href="#" className="text-xs hover:text-[#987362] transition-colors block">Политика конфиденциальности</a>
-               </div>
-               <div className="space-y-2">
-                  <p className="font-medium text-[#222222]">Контакты</p>
-                  <div className="flex justify-center md:justify-start space-x-4">
-                     <a href="#" className="text-xs hover:text-[#987362] transition-colors">Telegram</a>
-                     <a href="#" className="text-xs hover:text-[#987362] transition-colors">WhatsApp</a>
-                     <a href="#" className="text-xs hover:text-[#987362] transition-colors">Instagram</a>
-                  </div>
-               </div>
-            </div>
-          </footer>
         </div>
         {/* === КОНЕЦ БЛОКА ДЛЯ PDF === */}
+        
+        {/* Эти блоки скрыты из PDF с помощью класса no-print */}
+        <div className="bg-[#1c1c1c] p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 w-full max-w-6xl mx-auto mt-16 no-print">
+          <div className="space-y-2">
+            <p className="text-xl md:text-3xl font-tenor text-white tracking-tight leading-snug">Калькулятор показывает потенциал</p>
+            <p className="text-[#a0a0a0] text-sm md:text-xl font-light">Консультация превращает его в стратегию</p>
+          </div>
+          <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto justify-center bg-[#987362] hover:bg-[#826152] text-white px-6 py-4 text-sm md:text-base font-medium transition-colors flex items-center space-x-2"><span className="text-center">Записаться на разбор</span><ArrowRight className="w-5 h-5 flex-shrink-0" /></button>
+        </div>
+
+        <div className="max-w-6xl mx-auto no-print">
+          <Showcase formatMoney={formatMoney} />
+        </div>
+
+        <footer className="pt-16 pb-8 border-t border-[#e5e5e5] mt-16 text-center md:text-left max-w-6xl mx-auto no-print">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-[#666666]">
+             <div className="space-y-2 flex flex-col items-center md:items-start">
+               <p className="font-medium text-[#222222]">ИП Соболева Виктория Викторовна</p>
+               <p className="text-xs">ОГРНИП: 321508100582522</p>
+             </div>
+             <div className="space-y-2">
+                <p className="font-medium text-[#222222]">Документы</p>
+                <a href="#" className="text-xs hover:text-[#987362] transition-colors block">Политика конфиденциальности</a>
+             </div>
+             <div className="space-y-2">
+                <p className="font-medium text-[#222222]">Контакты</p>
+                <div className="flex justify-center md:justify-start space-x-4">
+                   <a href="#" className="text-xs hover:text-[#987362] transition-colors">Telegram</a>
+                   <a href="#" className="text-xs hover:text-[#987362] transition-colors">WhatsApp</a>
+                   <a href="#" className="text-xs hover:text-[#987362] transition-colors">Instagram</a>
+                </div>
+             </div>
+          </div>
+        </footer>
+
       </div>
       
       <LeadModal 
