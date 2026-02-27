@@ -55,16 +55,14 @@ export const Showcase = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {lots.map(lot => (
-          {/* Добавили класс group для отслеживания наведения на всю карточку */}
-          <div key={lot.id} className="bg-white border border-[#e5e5e5] hover:shadow-lg transition-shadow duration-300 flex flex-col group cursor-pointer">
+          <div key={lot.id} className="bg-white border border-[#e5e5e5] hover:shadow-lg transition-shadow duration-300 flex flex-col">
             
-            {/* Добавили overflow-hidden, чтобы картинка не вылезала за края при увеличении */}
-            <div className="relative h-48 md:h-56 bg-[#f5f5f5] overflow-hidden">
+            {/* Группа анимации теперь висит ТОЛЬКО на блоке с фотографией */}
+            <div className="relative h-48 md:h-56 bg-[#f5f5f5] overflow-hidden group/photo cursor-pointer">
               <img 
                 src={lot.image} 
                 alt={lot.title} 
-                {/* Добавили классы для плавного зума картинки (group-hover:scale-110) */}
-                className="w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110" 
+                className="w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover/photo:scale-110" 
               />
               <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[10px] tracking-wider uppercase font-medium text-[#222222]">
                 {lot.tag}
@@ -76,8 +74,7 @@ export const Showcase = () => {
                 <MapPin className="w-3.5 h-3.5 mr-1" />
                 <span>{lot.city}</span>
               </div>
-              {/* Добавили плавную смену цвета заголовка */}
-              <h3 className="font-tenor text-xl text-[#222222] mb-6 transition-colors duration-300 group-hover:text-[#987362]">{lot.title}</h3>
+              <h3 className="font-tenor text-xl text-[#222222] mb-6">{lot.title}</h3>
               
               <div className="mb-6">
                 <p className="text-[10px] text-[#a0a0a0] uppercase tracking-widest mb-1">Стоимость</p>
@@ -113,7 +110,6 @@ export const Showcase = () => {
         ))}
       </div>
 
-      {/* Блок Telegram тоже получил микро-анимации */}
       <div className="mt-12 bg-white border border-[#987362]/30 p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group/cta">
         <div className="absolute -right-20 -top-20 w-64 h-64 bg-[#fcf7f5] rounded-full blur-3xl opacity-50 pointer-events-none transition-transform duration-700 group-hover/cta:scale-150"></div>
         <div className="relative z-10 space-y-2 text-center md:text-left">
