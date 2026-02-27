@@ -3,7 +3,8 @@ import {
   Calculator, ArrowRight, Plus, Trash2, Home, Wallet, 
   AlertCircle, CheckCircle2, Settings2, Scale, ExternalLink, Download 
 } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 import { CURRENT_YEAR, constants } from './config/data';
 import { 
@@ -165,12 +166,12 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
-  // --- НОВАЯ ФУНКЦИЯ СКАЧИВАНИЯ PDF ---
+  // --- НАДЕЖНАЯ ФУНКЦИЯ СКАЧИВАНИЯ PDF (Многостраничная) ---
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     const element = document.getElementById('pdf-wrap');
 
-    // Прячем все элементы, которые не должны попасть в PDF (кнопки, крестики удаления и т.д.)
+    // Прячем элементы, которые не нужны в отчете (кнопки удаления, добавления и тд)
     const noPrintElements = document.querySelectorAll('.no-print');
     const originalDisplays = [];
     noPrintElements.forEach((el, index) => {
@@ -178,25 +179,46 @@ export default function App() {
       el.style.display = 'none';
     });
 
-    // Настройки генерации PDF
-    const opt = {
-      margin:       [10, 0, 10, 0],
-      filename:     'Инвестиционный калькулятор.pdf',
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { 
+    try {
+      // Создаем скриншот сайта в высоком качестве
+      const canvas = await html2canvas(element, {
         scale: 2, 
         useCORS: true, 
-        windowWidth: 1200 // Фиксируем ширину для идеального десктопного вида даже с телефона
-      }, 
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+        windowWidth: 1200 
+      });
 
-    try {
-      await html2pdf().set(opt).from(element).save();
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      
+      // Настраиваем документ формата А4
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      // Вычисляем высоту скриншота в миллиметрах
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Добавляем первую страницу
+      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Если калькулятор длинный, создаем дополнительные страницы
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Скачиваем готовый файл
+      pdf.save('Инвестиционный калькулятор.pdf');
+
     } catch (error) {
       console.error("Ошибка при создании PDF:", error);
+      alert("Не удалось создать PDF. Попробуйте обновить страницу.");
     } finally {
-      // Возвращаем элементы интерфейса обратно
+      // Возвращаем кнопки на экран
       noPrintElements.forEach((el, index) => {
         el.style.display = originalDisplays[index];
       });
@@ -218,7 +240,8 @@ export default function App() {
 
       <div className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 pb-20 overflow-x-hidden">
         {/* Обертка для формирования PDF */}
-        <div className="max-w-6xl mx-auto space-y-16" id="pdf-wrap">
+        <div className="max-w-6xl mx-auto space-y-16 bg-[#fafafa]" id="pdf-wrap">
+          
           <header className="text-center space-y-4 pt-10 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-tenor tracking-tight">Инвестиционный калькулятор</h1>
             <p className="text-lg text-[#666666] font-light max-w-2xl mx-auto px-4">Диагностика ваших активов и план максимизации роста капитала</p>
