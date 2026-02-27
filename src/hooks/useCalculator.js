@@ -137,6 +137,26 @@ export const useCalculator = ({
     }];
     const milestones = [];
 
+    // Вычисляем "идеальный платеж", если вложить ВЕСЬ капитал под 20%
+    let optimalFullPayment = 0;
+    let capForOpt = safeStartCapital;
+    const optMonths = 360;
+    if (isFamilyMortgage && capForOpt > 0) {
+      const fRate = (constants.rateFamily / 100) / 12;
+      const annF = (fRate * Math.pow(1 + fRate, optMonths)) / (Math.pow(1 + fRate, optMonths) - 1);
+      const usedDP = Math.min(capForOpt, 3000000); // макс ПВ для семейной
+      optimalFullPayment += (usedDP / constants.downPaymentPercent * (1 - constants.downPaymentPercent)) * annF;
+      capForOpt -= usedDP;
+    }
+    if (capForOpt > 0) {
+      const sRate = (constants.rateStandardFirst / 100) / 12;
+      const annS = (sRate * Math.pow(1 + sRate, optMonths)) / (Math.pow(1 + sRate, optMonths) - 1);
+      optimalFullPayment += (capForOpt / constants.downPaymentPercent * (1 - constants.downPaymentPercent)) * annS;
+    }
+
+    let firstCycleUnusedCapital = 0;
+    let firstCyclePropertiesCount = 0;
+
     for (let cycle = 0; cycle < constants.cyclesCount; cycle++) {
       const currentMortgageTermYears = 30 - (cycle * 5);
       const totalMonths = currentMortgageTermYears * 12;
@@ -182,6 +202,10 @@ export const useCalculator = ({
             remainingCapital -= standardDP;
           }
         }
+        
+        firstCycleUnusedCapital = Math.max(0, remainingCapital);
+        firstCyclePropertiesCount = cycleProperties.length;
+
       } else {
         if (remainingCapital > 0 && (isAutoPayment || safePaymentLimit > 0)) {
           const nextRateDecimal = (constants.rateNextCycles / 100) / 12;
@@ -240,7 +264,10 @@ export const useCalculator = ({
     const growthMultiplier = (finalReal / safeStartCapital).toFixed(1);
     const cagr = ((Math.pow(finalReal / safeStartCapital, 1 / (constants.cyclesCount * constants.cycleYears)) - 1) * 100).toFixed(1);
 
-    return { yearlyData, milestones, finalNominal, finalReal, growthMultiplier, cagr };
+    return { 
+      yearlyData, milestones, finalNominal, finalReal, growthMultiplier, cagr, 
+      firstCycleUnusedCapital, firstCyclePropertiesCount, optimalFullPayment 
+    };
   }, [startCapital, isAutoPayment, monthlyPaymentLimit, isFamilyMortgage]);
 
   const currentStrategyFinalReal = useMemo(() => {

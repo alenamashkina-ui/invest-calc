@@ -14,19 +14,16 @@ import { ChartSection } from './components/ChartSection';
 import { LeadModal } from './components/LeadModal';
 import { useCalculator } from './hooks/useCalculator';
 
-// Хелпер для форматирования чисел в полях ввода
 const formatNumInput = (val) => {
   if (val === '' || val === null || val === undefined) return '';
   return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 };
 
-// Хелпер для красивого отображения денег с ₽
 const formatMoney = (val) => {
   if (isNaN(val) || val === null || val === undefined) return "0 ₽";
   return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(val) + " ₽";
 };
 
-// Умный компонент ввода, который не ломает курсор
 const NumberInput = ({ value, onChange, className, placeholder }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -102,6 +99,8 @@ export default function App() {
     startCapital, isAutoPayment, monthlyPaymentLimit, 
     isFamilyMortgage, desiredPassiveIncome
   });
+
+  const { firstCycleUnusedCapital, firstCyclePropertiesCount, optimalFullPayment } = calculationResults;
 
   useEffect(() => {
     setStartCapital(Math.round(auditResults.totalPotentialCapital));
@@ -548,6 +547,33 @@ export default function App() {
                     <p className="text-xs text-[#a0a0a0]">Цель через 15 лет</p>
                   </div>
                 </div>
+
+                {/* --- УМНЫЕ ПОДСКАЗКИ АЛГОРИТМА --- */}
+                {firstCycleUnusedCapital > 0 && !isAutoPayment && (
+                  <div className="mt-6 p-4 bg-orange-50 border border-orange-200 flex items-start space-x-3">
+                    <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-orange-900 mb-1">Часть капитала не работает</p>
+                      <p className="text-xs text-orange-800 leading-relaxed">
+                        Из-за лимита по платежу {formatMoney(firstCycleUnusedCapital)} лежат «под подушкой» и сгорают от инфляции. Включите авторасчет платежа (потребуется ~{formatMoney(optimalFullPayment)}/мес), чтобы вложить 100% денег под 20% взноса и увидеть максимальный рост.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {isFamilyMortgage && firstCyclePropertiesCount > 1 && (
+                  <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 flex items-start space-x-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-emerald-900 mb-1">Умная разбивка капитала</p>
+                      <p className="text-xs text-emerald-800 leading-relaxed">
+                        Так как у вас есть право на семейную ипотеку, алгоритм купил 2 квартиры: первую по льготной ставке (исчерпав лимит кредита 12 млн), а на остаток средств — вторую по стандартной ставке.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {/* --------------------------------- */}
+
               </div>
 
               <ChartSection
