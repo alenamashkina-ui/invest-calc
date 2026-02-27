@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, CheckCircle2 } from 'lucide-react';
 
-// Хелпер для красивого форматирования денег в выписке
 const formatMoney = (val) => {
   if (isNaN(val) || val === null || val === undefined) return "0 ₽";
   return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(val) + " ₽";
@@ -29,15 +28,21 @@ export const LeadModal = ({ isOpen, onClose, auditData, rawAssets, rawSettings }
 
   if (!isOpen) return null;
 
-  // Генератор полного досье клиента
   const generateDetailsText = () => {
-    let text = "=== ДЕТАЛИЗАЦИЯ АКТИВОВ ===\n\n";
+    let text = "=== ИТОГИ АУДИТА (ТОЧКА А) ===\n";
+    text += `Текущий капитал: ${formatMoney(auditData.startCapital)}\n`;
+    text += `Неэффективный капитал: ${formatMoney(auditData.inefficientCapital)}\n`;
+    text += `Цель по доходу: ${formatMoney(auditData.desiredIncome)} в мес\n`;
+    text += `Упущенная выгода (по Сценарию А): ${formatMoney(auditData.lostProfit)}\n\n`;
+
+    text += "=== ДЕТАЛИЗАЦИЯ АКТИВОВ ===\n\n";
 
     if (rawAssets?.realEstate?.length > 0) {
       text += "НЕДВИЖИМОСТЬ:\n";
       rawAssets.realEstate.forEach((item, i) => {
         text += `${i + 1}. ${item.type || 'Объект'} ${item.city ? `(${item.city})` : ''}\n`;
-        text += `   Куплено: ${item.purchaseYear} г. за ${formatMoney(item.purchasePrice)}\n`;
+        if (item.buildYear) text += `   Год постройки дома: ${item.buildYear}\n`;
+        text += `   Куплено: ${item.purchaseYear} г. за ${Number(item.purchasePrice) > 0 ? formatMoney(item.purchasePrice) : '0 ₽ (Наследство/Подарок)'}\n`;
         text += `   Текущая цена: ${formatMoney(item.currentValue)}\n`;
         if (item.isUnderConstruction) text += `   Статус: В стройке\n`;
         if (item.hasMortgage) {
@@ -100,11 +105,6 @@ export const LeadModal = ({ isOpen, onClose, auditData, rawAssets, rawSettings }
       type: 'CALCULATOR_LEAD',
       name: name,
       phone: phone,
-      capital: Math.round(auditData.startCapital || 0),
-      inefficient: Math.round(auditData.inefficientCapital || 0),
-      income: Math.round(auditData.desiredIncome || 0),
-      lostprofit: Math.round(auditData.lostProfit || 0),
-      // Добавляем наше огромное сгенерированное досье
       details: generateDetailsText()
     };
 

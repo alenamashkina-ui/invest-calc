@@ -66,7 +66,6 @@ export default function App() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Очистили все стартовые данные
   const [realEstate, setRealEstate] = useState([]);
   const [deposits, setDeposits] = useState([]);
   const [cash, setCash] = useState(null);
@@ -97,7 +96,7 @@ export default function App() {
 
   const addRE = () => {
     setRealEstate(prev => [{
-      id: Date.now(), type: '', city: '', purchaseYear: CURRENT_YEAR, purchasePrice: '', currentValue: '',
+      id: Date.now(), type: '', city: '', buildYear: '', purchaseYear: CURRENT_YEAR, purchasePrice: '', currentValue: '',
       hasMortgage: false, initialPayment: '', loanBalance: '', mortgagePayment: '', mortgageRate: '',
       isUnderConstruction: false, isRented: false, rentIncome: '', isEditing: true
     }, ...prev]);
@@ -261,10 +260,13 @@ export default function App() {
                           <div>
                             <label className="text-xs text-[#666666] mb-1 block">Город (необязательно)</label>
                             <input type="text" value={item.city} onChange={(e) => updateRE(item.id, 'city', e.target.value)} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" placeholder="Москва" />
-                            <p className="text-[10px] text-[#a0a0a0] mt-1 leading-tight">Заполните для себя, чтобы удобнее ориентироваться в активах, или для более точного подбора стратегии на будущей консультации с брокером</p>
                           </div>
                           <div>
-                            <label className="text-xs text-[#666666] mb-1 block">Год покупки</label>
+                            <label className="text-xs text-[#666666] mb-1 block">Год постройки дома</label>
+                            <input type="number" value={item.buildYear === '' ? '' : item.buildYear} onChange={(e) => updateRE(item.id, 'buildYear', e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" placeholder="Например, 2015" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-[#666666] mb-1 block">Год приобретения</label>
                             <input type="number" value={item.purchaseYear === '' ? '' : item.purchaseYear} onChange={(e) => updateRE(item.id, 'purchaseYear', e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                           </div>
                           <div>
@@ -272,9 +274,10 @@ export default function App() {
                             <NumberInput value={item.currentValue} onChange={(val) => updateRE(item.id, 'currentValue', val)} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
                             <button onClick={() => setIsModalOpen(true)} className="text-[10px] text-[#987362] hover:underline mt-1 flex items-center"><ExternalLink className="w-3 h-3 mr-1" /> Запросить точную оценку</button>
                           </div>
-                          <div className="sm:col-span-2">
-                            <label className="text-xs text-[#666666] mb-1 block">Цена покупки (полная стоимость по ДДУ, ₽)</label>
+                          <div>
+                            <label className="text-xs text-[#666666] mb-1 block">Цена покупки (₽)</label>
                             <NumberInput value={item.purchasePrice} onChange={(val) => updateRE(item.id, 'purchasePrice', val)} className="w-full p-2.5 text-sm bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#987362] transition-colors" />
+                            <p className="text-[10px] text-[#a0a0a0] mt-1 leading-tight">Если досталась бесплатно (наследство/подарок), оставьте 0</p>
                           </div>
                           <div className="sm:col-span-2 space-y-4 bg-white p-4 border border-[#e5e5e5]">
                             <div className="flex items-center space-x-3 text-sm">
@@ -328,8 +331,11 @@ export default function App() {
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Текущая стоимость</p><p className="font-medium text-xl">{formatMoney(item.currentValue)}</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Чистый капитал</p><p className="font-medium text-xl text-[#987362]">{formatMoney(Math.max(0, equity))}</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Срок владения</p><p className="font-medium text-xl">{yearsOwned + " " + getYearWord(yearsOwned)}</p></div>
-                        <div><p className="text-xs text-[#666666] mb-1 font-light">Общий прирост</p><p className={`font-medium text-xl ${totalGrowthPercent > 0 ? "text-green-600" : (totalGrowthPercent < 0 ? "text-red-600" : "")}`}>{totalGrowthPercent > 0 ? "+" : ""}{totalGrowthPercent}%</p></div>
-                        <div><p className="text-xs text-[#666666] mb-1 font-light">Рост стоимости (CAGR)</p><p className={`font-medium text-xl ${cagr > 0 ? "text-green-600" : "text-red-600"}`}>{cagr.toFixed(1) + "%"} <span className="text-xs text-[#a0a0a0] font-light">в год</span></p></div>
+                        
+                        {/* Измененная логика для нулевой цены покупки */}
+                        <div><p className="text-xs text-[#666666] mb-1 font-light">Общий прирост</p><p className={`font-medium text-xl ${pPrice > 0 ? (totalGrowthPercent > 0 ? "text-green-600" : (totalGrowthPercent < 0 ? "text-red-600" : "")) : "text-[#a0a0a0]"}`}>{pPrice > 0 ? (totalGrowthPercent > 0 ? "+" : "") + totalGrowthPercent + "%" : "—"}</p></div>
+                        <div><p className="text-xs text-[#666666] mb-1 font-light">Рост стоимости (CAGR)</p><p className={`font-medium text-xl ${pPrice > 0 ? (cagr > 0 ? "text-green-600" : "text-red-600") : "text-[#a0a0a0]"}`}>{pPrice > 0 ? cagr.toFixed(1) + "%" : "—"} {pPrice > 0 && <span className="text-xs text-[#a0a0a0] font-light">в год</span>}</p></div>
+                        
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Чистая арендная доходность</p><p className={`font-medium text-xl ${item.isUnderConstruction ? "text-[#a0a0a0]" : (roe > 0 ? "text-green-600" : "text-red-600")}`}>{item.isUnderConstruction ? "В стройке" : roe.toFixed(1) + "%"} {!item.isUnderConstruction && <span className="text-xs text-[#a0a0a0] font-light">в год</span>}</p></div>
                         <div className="col-span-2 bg-[#fafafa] p-3 border border-[#e5e5e5] rounded flex flex-col justify-center"><p className="text-xs text-[#666666] mb-1 font-light">Реальная полная доходность</p><p className={`font-medium text-2xl ${realTotalYield > 4 ? "text-green-600" : (realTotalYield < 0 ? "text-red-600" : "text-yellow-600")}`}>{realTotalYield > 0 ? "+" : ""}{realTotalYield.toFixed(1) + "%"} <span className="text-xs text-[#a0a0a0] font-light">в год</span></p></div>
                       </div>
