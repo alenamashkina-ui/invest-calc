@@ -68,7 +68,7 @@ export default function App() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [pdfReadyObj, setPdfReadyObj] = useState(null); // Новый стейт для зеленой кнопки
+  const [pdfReadyObj, setPdfReadyObj] = useState(null);
 
   const [realEstate, setRealEstate] = useState([]);
   const [deposits, setDeposits] = useState([]);
@@ -176,18 +176,17 @@ export default function App() {
     try {
       await new Promise(resolve => setTimeout(resolve, 100));
 
+      const isMobile = window.innerWidth < 768;
+
       const canvas = await html2canvas(element, {
-        scale: 1.5, // Уменьшил с 2 до 1.5, чтобы мобилки не "выплевывали" ошибку памяти
-        useCORS: true,
-        allowTaint: true,
+        scale: isMobile ? 1 : 1.5, // Снижаем масштаб для мобилок, чтобы не падало по памяти
+        useCORS: true, // Оставили только это, allowTaint удален!
         backgroundColor: '#fafafa',
         windowWidth: 1200,
         onclone: (documentClone) => {
-          // Прячем всё, что не нужно в отчете
           const noPrintElements = documentClone.querySelectorAll('.no-print');
           noPrintElements.forEach(el => el.style.display = 'none');
           
-          // Показываем секретный блок с контактами, который мы добавим в PDF
           const contactsBlock = documentClone.getElementById('pdf-contacts');
           if (contactsBlock) {
             contactsBlock.style.display = 'block';
@@ -216,7 +215,6 @@ export default function App() {
         heightLeft -= pageHeight;
       }
 
-      // Создаем файл и сохраняем его в память
       const pdfBlob = pdf.output('blob');
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const file = new File([pdfBlob], 'Инвестиционный_калькулятор.pdf', { type: 'application/pdf' });
@@ -225,7 +223,8 @@ export default function App() {
 
     } catch (error) {
       console.error("Ошибка при создании PDF:", error);
-      alert("Не удалось собрать данные. Пожалуйста, перезагрузите страницу.");
+      // Если браузер совсем суровый, мы просто тихо открываем стандартное окно печати (в нем тоже можно сохранить PDF)
+      window.print();
     } finally {
       setIsDownloading(false);
     }
@@ -248,14 +247,12 @@ export default function App() {
           throw new Error("Share not supported");
         }
       } catch (error) {
-        // Если клиент отменил шеринг или айфон заблокировал, просто скачиваем
         const link = document.createElement('a');
         link.href = pdfReadyObj.url;
         link.download = 'Инвестиционный_калькулятор.pdf';
         link.click();
       }
     } else {
-      // Компьютер: мгновенное скачивание файла
       const link = document.createElement('a');
       link.href = pdfReadyObj.url;
       link.download = 'Инвестиционный_калькулятор.pdf';
@@ -273,11 +270,12 @@ export default function App() {
         input[type=number] { -moz-appearance: textfield; }
         @keyframes urgentPulse { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 50% { box-shadow: 0 0 12px 6px rgba(220, 38, 38, 0.2); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
         .animate-urgent-pulse { animation: urgentPulse 1.5s infinite; }
+        @media print { @page { margin: 1.5cm; size: A4 portrait; } body, .min-h-screen { background-color: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .no-print { display: none !important; } .print-break-inside-avoid { page-break-inside: avoid; break-inside: avoid; } }
       `}</style>
 
       <div className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 pb-20 overflow-x-hidden">
         
-        {/* === БЛОК ДЛЯ PDF (теперь в него попадает только самое важное) === */}
+        {/* === БЛОК ДЛЯ PDF === */}
         <div className="max-w-6xl mx-auto space-y-16 bg-[#fafafa] relative" id="pdf-wrap">
           <header className="text-center space-y-4 pt-10 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-tenor tracking-tight">Инвестиционный калькулятор</h1>
@@ -288,7 +286,7 @@ export default function App() {
             <p className="font-medium text-[#222222] mb-4 text-base">Этот калькулятор показывает базовую модель масштабирования капитала через недвижимость</p>
             <p className="mb-4">Стратегия основана на четырёх ключевых принципах:</p>
             <div className="space-y-4">
-              <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>рост стоимости ликвидных объектов, особенно при входе в projects на старте продаж</p></div>
+              <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>рост стоимости ликвидных объектов, особенно при входе в проекты на старте продаж</p></div>
               <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>использование кредитного плеча – покупка с ипотекой при первоначальном взносе от 20%</p></div>
               <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>продажа объекта на пике роста цены, как правило через 4–5 лет владения</p></div>
               <div className="flex items-start"><CheckCircle2 className="w-5 h-5 text-[#987362] mr-3 flex-shrink-0 mt-0.5" /><p>эффект сложного процента за счёт последовательного реинвестирования капитала</p></div>
@@ -412,7 +410,7 @@ export default function App() {
                     );
                   }
                   return (
-                    <div key={`re-${item.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} shadow-sm hover:shadow-md transition-shadow duration-300 relative group p-6 md:p-8`}>
+                    <div key={`re-${item.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} shadow-sm hover:shadow-md transition-shadow duration-300 relative group p-6 md:p-8 print-break-inside-avoid`}>
                       <button onClick={() => removeRE(item.id)} className="absolute top-6 right-6 text-[#e5e5e5] group-hover:text-red-400 transition-colors z-10 no-print" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
                       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 pr-8">
                         <div>
@@ -449,7 +447,7 @@ export default function App() {
 
                   if (dep.isEditing) {
                     return (
-                      <div key={`dep-${dep.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print">
+                      <div key={`dep-${dep.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print print-break-inside-avoid">
                         <div className="flex justify-between items-center mb-6">
                           <h4 className="font-tenor text-xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Параметры депозита</h4>
                           <button onClick={() => removeDeposit(dep.id)} className="text-[#a0a0a0] hover:text-red-400 transition-colors" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
@@ -465,7 +463,7 @@ export default function App() {
                     );
                   }
                   return (
-                    <div key={`dep-${dep.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group`}>
+                    <div key={`dep-${dep.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group print-break-inside-avoid`}>
                       <button onClick={() => removeDeposit(dep.id)} className="absolute top-6 right-6 text-[#e5e5e5] group-hover:text-red-400 transition-colors z-10 no-print" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
                       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 pr-8">
                         <h4 className="font-tenor text-2xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Банковский депозит</h4>
@@ -492,7 +490,7 @@ export default function App() {
 
                   if (stock.isEditing) {
                     return (
-                      <div key={`stock-${stock.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print">
+                      <div key={`stock-${stock.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print print-break-inside-avoid">
                         <div className="flex justify-between items-center mb-6">
                           <h4 className="font-tenor text-xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Параметры инвестиций в акции</h4>
                           <button onClick={() => removeStock(stock.id)} className="text-[#a0a0a0] hover:text-red-400 transition-colors" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
@@ -508,7 +506,7 @@ export default function App() {
                     );
                   }
                   return (
-                    <div key={`stock-${stock.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group`}>
+                    <div key={`stock-${stock.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group print-break-inside-avoid`}>
                       <button onClick={() => removeStock(stock.id)} className="absolute top-6 right-6 text-[#e5e5e5] group-hover:text-red-400 transition-colors z-10 no-print" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
                       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 pr-8">
                         <h4 className="font-tenor text-2xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Фондовый рынок</h4>
@@ -532,7 +530,7 @@ export default function App() {
 
                   if (asset.isEditing) {
                     return (
-                      <div key={`cash-${asset.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print">
+                      <div key={`cash-${asset.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print print-break-inside-avoid">
                         <div className="flex justify-between items-center mb-6">
                           <h4 className="font-tenor text-xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Настройка наличных</h4>
                           <button onClick={() => { setCash(null); setIsEditingCash(false); }} className="text-[#a0a0a0] hover:text-red-400 transition-colors" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
@@ -548,7 +546,7 @@ export default function App() {
                     );
                   }
                   return (
-                    <div key={`cash-${asset.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group`}>
+                    <div key={`cash-${asset.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group print-break-inside-avoid`}>
                       <button onClick={() => setCash(null)} className="absolute top-6 right-6 text-[#e5e5e5] group-hover:text-red-400 transition-colors z-10 no-print" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
                       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 pr-8">
                         <h4 className="font-tenor text-2xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Наличные средства</h4>
@@ -567,7 +565,7 @@ export default function App() {
               })}
             </div>
 
-            <div className="bg-[#987362] p-8 md:p-10 shadow-sm relative overflow-hidden mt-10">
+            <div className="bg-[#987362] p-8 md:p-10 shadow-sm relative overflow-hidden mt-10 print-break-inside-avoid">
               <Scale className="absolute -right-10 -bottom-10 w-64 h-64 text-white opacity-5 pointer-events-none" />
               <div className="relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -591,7 +589,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="space-y-8 pt-8">
+          <section className="space-y-8 pt-8 print-break-inside-avoid">
             <div className="space-y-4 border-b border-[#e5e5e5] pb-4">
               <div className="flex items-center space-x-3">
                 <Calculator className="w-6 h-6 text-[#987362]" />
@@ -668,13 +666,13 @@ export default function App() {
             </div>
 
             {/* === НОВЫЙ БЛОК КОНТАКТОВ, КОТОРЫЙ ПОЯВИТСЯ ТОЛЬКО В PDF === */}
-            <div id="pdf-contacts" className="hidden mt-20 pt-10 border-t-2 border-[#987362] text-[#222222]">
-              <h3 className="font-tenor text-3xl mb-8">Агентство недвижимости «Надо брать»</h3>
-              <div className="space-y-4 text-base font-light">
-                <p><span className="font-medium">Сайт:</span> soboleva-nedvizhmost.ru</p>
-                <p><span className="font-medium">Телефон:</span> +7 (991) 775-20-76</p>
-                <p><span className="font-medium">Телеграм-канал:</span> @mne_vse_nado</p>
-                <p><span className="font-medium">Instagram:</span> @soboleva_vik</p>
+            <div id="pdf-contacts" className="hidden mt-20 pt-10 border-t border-[#e5e5e5] text-[#222222] bg-[#fafafa] p-8 border-l-4 border-l-[#987362]">
+              <h3 className="font-tenor text-2xl mb-4">Агентство недвижимости «Надо брать»</h3>
+              <div className="space-y-2 text-sm font-light">
+                <p><span className="font-medium mr-2">Сайт:</span> soboleva-nedvizhmost.ru</p>
+                <p><span className="font-medium mr-2">Телефон:</span> +7 (991) 775-20-76</p>
+                <p><span className="font-medium mr-2">Телеграм-канал:</span> @mne_vse_nado</p>
+                <p><span className="font-medium mr-2">Instagram:</span> @soboleva_vik</p>
               </div>
             </div>
 
@@ -686,7 +684,7 @@ export default function App() {
                   className="bg-[#28a745] hover:bg-[#218838] text-white px-8 py-4 text-sm font-medium transition-all flex items-center space-x-2 shadow-lg shadow-green-500/30"
                 >
                   <Download className="w-5 h-5" />
-                  <span>Документ готов! Сохранить</span>
+                  <span>Отчет готов! Нажмите, чтобы сохранить</span>
                 </button>
               ) : (
                 <button 
