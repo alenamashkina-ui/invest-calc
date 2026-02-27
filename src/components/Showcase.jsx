@@ -25,7 +25,8 @@ export const Showcase = () => {
       schedule: "Платеж 123 484 ₽/мес на 7 лет. Далее переход на станд. ставку, рефинансируемся",
       growth: "+49%",
       profit: "~13 000 000 ₽",
-      image: "https://optim.tildacdn.com/tild6662-3261-4464-a139-303133346563/-/format/webp/IMG_3602.PNG.webp"
+      // Вот здесь заменена фотография
+      image: "https://optim.tildacdn.com/tild6266-6539-4163-a437-326438313365/-/format/webp/2026-02-27_172004.jpg.webp"
     },
     {
       id: 3,

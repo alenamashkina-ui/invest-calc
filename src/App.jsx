@@ -167,7 +167,6 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
-  // --- ШАГ 1: Асинхронная подготовка PDF (Без вызова скачивания, чтобы не злить айфон) ---
   const handlePreparePDF = async () => {
     setIsDownloading(true);
     setPdfReadyObj(null);
@@ -179,14 +178,16 @@ export default function App() {
       const isMobile = window.innerWidth < 768;
 
       const canvas = await html2canvas(element, {
-        scale: isMobile ? 1 : 1.5, // Снижаем масштаб для мобилок, чтобы не падало по памяти
-        useCORS: true, // Оставили только это, allowTaint удален!
+        scale: isMobile ? 1 : 1.5, 
+        useCORS: true,
         backgroundColor: '#fafafa',
         windowWidth: 1200,
         onclone: (documentClone) => {
+          // Прячем всё лишнее из PDF
           const noPrintElements = documentClone.querySelectorAll('.no-print');
           noPrintElements.forEach(el => el.style.display = 'none');
           
+          // ПОКАЗЫВАЕМ КОНТАКТЫ В PDF
           const contactsBlock = documentClone.getElementById('pdf-contacts');
           if (contactsBlock) {
             contactsBlock.style.display = 'block';
@@ -223,14 +224,12 @@ export default function App() {
 
     } catch (error) {
       console.error("Ошибка при создании PDF:", error);
-      // Если браузер совсем суровый, мы просто тихо открываем стандартное окно печати (в нем тоже можно сохранить PDF)
       window.print();
     } finally {
       setIsDownloading(false);
     }
   };
 
-  // --- ШАГ 2: Синхронное скачивание/шеринг по клику человека ---
   const handleSavePDF = async () => {
     if (!pdfReadyObj) return;
 
@@ -270,7 +269,6 @@ export default function App() {
         input[type=number] { -moz-appearance: textfield; }
         @keyframes urgentPulse { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 50% { box-shadow: 0 0 12px 6px rgba(220, 38, 38, 0.2); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
         .animate-urgent-pulse { animation: urgentPulse 1.5s infinite; }
-        @media print { @page { margin: 1.5cm; size: A4 portrait; } body, .min-h-screen { background-color: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .no-print { display: none !important; } .print-break-inside-avoid { page-break-inside: avoid; break-inside: avoid; } }
       `}</style>
 
       <div className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 pb-20 overflow-x-hidden">
@@ -665,7 +663,7 @@ export default function App() {
               />
             </div>
 
-            {/* === НОВЫЙ БЛОК КОНТАКТОВ, КОТОРЫЙ ПОЯВИТСЯ ТОЛЬКО В PDF === */}
+            {/* === БЛОК КОНТАКТОВ, КОТОРЫЙ ПОЯВИТСЯ ТОЛЬКО В PDF === */}
             <div id="pdf-contacts" className="hidden mt-20 pt-10 border-t border-[#e5e5e5] text-[#222222] bg-[#fafafa] p-8 border-l-4 border-l-[#987362]">
               <h3 className="font-tenor text-2xl mb-4">Агентство недвижимости «Надо брать»</h3>
               <div className="space-y-2 text-sm font-light">
