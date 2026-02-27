@@ -166,12 +166,12 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
-  // --- НАДЕЖНАЯ ФУНКЦИЯ СКАЧИВАНИЯ PDF (Многостраничная) ---
+  // --- БРОНЕБОЙНАЯ ФУНКЦИЯ СКАЧИВАНИЯ PDF ---
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     const element = document.getElementById('pdf-wrap');
 
-    // Прячем элементы, которые не нужны в отчете (кнопки удаления, добавления и тд)
+    // Прячем кнопки интерфейса перед "снимком"
     const noPrintElements = document.querySelectorAll('.no-print');
     const originalDisplays = [];
     noPrintElements.forEach((el, index) => {
@@ -180,45 +180,47 @@ export default function App() {
     });
 
     try {
-      // Создаем скриншот сайта в высоком качестве
+      // Даем браузеру миллисекунду, чтобы скрыть кнопки
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Создаем скриншот (allowTaint и useCORS решают проблему с картинками Тильды)
       const canvas = await html2canvas(element, {
-        scale: 2, 
-        useCORS: true, 
-        windowWidth: 1200 
+        scale: 1.5, // Слегка уменьшили масштаб, чтобы не вылетало на айфонах
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#fafafa',
+        windowWidth: 1200 // Всегда делаем широкий, красивый десктопный вид
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       
-      // Настраиваем документ формата А4
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       
-      // Вычисляем высоту скриншота в миллиметрах
       const imgHeight = (canvas.height * pdfWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
 
-      // Добавляем первую страницу
+      // Первая страница
       pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      // Если калькулятор длинный, создаем дополнительные страницы
-      while (heightLeft >= 0) {
+      // Если отчет длинный, добавляем еще страницы
+      while (heightLeft > 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
-      // Скачиваем готовый файл
       pdf.save('Инвестиционный калькулятор.pdf');
 
     } catch (error) {
       console.error("Ошибка при создании PDF:", error);
-      alert("Не удалось создать PDF. Попробуйте обновить страницу.");
+      alert("Не удалось скачать файл. Убедитесь, что у вас стабильный интернет.");
     } finally {
-      // Возвращаем кнопки на экран
+      // Возвращаем кнопки обратно
       noPrintElements.forEach((el, index) => {
         el.style.display = originalDisplays[index];
       });
@@ -239,9 +241,9 @@ export default function App() {
       `}</style>
 
       <div className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 pb-20 overflow-x-hidden">
-        {/* Обертка для формирования PDF */}
+        
+        {/* === БЛОК ДЛЯ PDF === */}
         <div className="max-w-6xl mx-auto space-y-16 bg-[#fafafa]" id="pdf-wrap">
-          
           <header className="text-center space-y-4 pt-10 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-tenor tracking-tight">Инвестиционный калькулятор</h1>
             <p className="text-lg text-[#666666] font-light max-w-2xl mx-auto px-4">Диагностика ваших активов и план максимизации роста капитала</p>
@@ -673,6 +675,7 @@ export default function App() {
             </div>
           </footer>
         </div>
+        {/* === КОНЕЦ БЛОКА ДЛЯ PDF === */}
       </div>
       
       <LeadModal 
