@@ -3,6 +3,7 @@ import {
   Calculator, ArrowRight, Plus, Trash2, Home, Wallet, 
   AlertCircle, CheckCircle2, Settings2, Scale, ExternalLink, Download 
 } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 
 import { CURRENT_YEAR, constants } from './config/data';
 import { 
@@ -65,6 +66,7 @@ export default function App() {
   }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const [realEstate, setRealEstate] = useState([]);
   const [deposits, setDeposits] = useState([]);
@@ -163,7 +165,44 @@ export default function App() {
 
   combinedAssets.sort((a, b) => b.id - a.id);
 
-  const handlePrint = () => window.print();
+  // --- НОВАЯ ФУНКЦИЯ СКАЧИВАНИЯ PDF ---
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
+    const element = document.getElementById('pdf-wrap');
+
+    // Прячем все элементы, которые не должны попасть в PDF (кнопки, крестики удаления и т.д.)
+    const noPrintElements = document.querySelectorAll('.no-print');
+    const originalDisplays = [];
+    noPrintElements.forEach((el, index) => {
+      originalDisplays[index] = el.style.display;
+      el.style.display = 'none';
+    });
+
+    // Настройки генерации PDF
+    const opt = {
+      margin:       [10, 0, 10, 0],
+      filename:     'Инвестиционный калькулятор.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { 
+        scale: 2, 
+        useCORS: true, 
+        windowWidth: 1200 // Фиксируем ширину для идеального десктопного вида даже с телефона
+      }, 
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error("Ошибка при создании PDF:", error);
+    } finally {
+      // Возвращаем элементы интерфейса обратно
+      noPrintElements.forEach((el, index) => {
+        el.style.display = originalDisplays[index];
+      });
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div>
@@ -175,16 +214,11 @@ export default function App() {
         input[type=number] { -moz-appearance: textfield; }
         @keyframes urgentPulse { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 50% { box-shadow: 0 0 12px 6px rgba(220, 38, 38, 0.2); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
         .animate-urgent-pulse { animation: urgentPulse 1.5s infinite; }
-        @media print { @page { margin: 1.5cm; size: A4 portrait; } body, .min-h-screen { background-color: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .no-print { display: none !important; } .print-break-inside-avoid { page-break-inside: avoid; break-inside: avoid; } }
       `}</style>
 
-      <div className="hidden print:flex fixed bottom-0 left-0 w-full justify-between items-center py-2 text-[#a0a0a0] text-[10px] z-50 bg-white border-t border-[#e5e5e5]">
-        <span>Диагностика активов и план роста капитала</span>
-        <span className="font-tenor text-sm text-[#222222]">Надо брать</span>
-      </div>
-
       <div className="min-h-screen bg-[#fafafa] text-[#222222] font-montserrat p-4 md:p-10 pb-20 overflow-x-hidden">
-        <div className="max-w-6xl mx-auto space-y-16">
+        {/* Обертка для формирования PDF */}
+        <div className="max-w-6xl mx-auto space-y-16" id="pdf-wrap">
           <header className="text-center space-y-4 pt-10 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-tenor tracking-tight">Инвестиционный калькулятор</h1>
             <p className="text-lg text-[#666666] font-light max-w-2xl mx-auto px-4">Диагностика ваших активов и план максимизации роста капитала</p>
@@ -247,7 +281,7 @@ export default function App() {
 
                   if (item.isEditing) {
                     return (
-                      <div key={`re-${item.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print print-break-inside-avoid">
+                      <div key={`re-${item.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print">
                         <div className="flex justify-between items-center mb-6">
                           <h4 className="font-tenor text-xl flex items-center"><Home className="w-5 h-5 mr-2 text-[#987362]" /> Параметры недвижимости</h4>
                           <button onClick={() => removeRE(item.id)} className="text-[#a0a0a0] hover:text-red-400 transition-colors" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
@@ -318,7 +352,7 @@ export default function App() {
                     );
                   }
                   return (
-                    <div key={`re-${item.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} shadow-sm hover:shadow-md transition-shadow duration-300 relative group p-6 md:p-8 print-break-inside-avoid`}>
+                    <div key={`re-${item.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} shadow-sm hover:shadow-md transition-shadow duration-300 relative group p-6 md:p-8`}>
                       <button onClick={() => removeRE(item.id)} className="absolute top-6 right-6 text-[#e5e5e5] group-hover:text-red-400 transition-colors z-10 no-print" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
                       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 pr-8">
                         <div>
@@ -332,7 +366,6 @@ export default function App() {
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Чистый капитал</p><p className="font-medium text-xl text-[#987362]">{formatMoney(Math.max(0, equity))}</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Срок владения</p><p className="font-medium text-xl">{yearsOwned + " " + getYearWord(yearsOwned)}</p></div>
                         
-                        {/* Измененная логика для нулевой цены покупки */}
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Общий прирост</p><p className={`font-medium text-xl ${pPrice > 0 ? (totalGrowthPercent > 0 ? "text-green-600" : (totalGrowthPercent < 0 ? "text-red-600" : "")) : "text-[#a0a0a0]"}`}>{pPrice > 0 ? (totalGrowthPercent > 0 ? "+" : "") + totalGrowthPercent + "%" : "—"}</p></div>
                         <div><p className="text-xs text-[#666666] mb-1 font-light">Рост стоимости (CAGR)</p><p className={`font-medium text-xl ${pPrice > 0 ? (cagr > 0 ? "text-green-600" : "text-red-600") : "text-[#a0a0a0]"}`}>{pPrice > 0 ? cagr.toFixed(1) + "%" : "—"} {pPrice > 0 && <span className="text-xs text-[#a0a0a0] font-light">в год</span>}</p></div>
                         
@@ -356,7 +389,7 @@ export default function App() {
 
                   if (dep.isEditing) {
                     return (
-                      <div key={`dep-${dep.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print print-break-inside-avoid">
+                      <div key={`dep-${dep.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print">
                         <div className="flex justify-between items-center mb-6">
                           <h4 className="font-tenor text-xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Параметры депозита</h4>
                           <button onClick={() => removeDeposit(dep.id)} className="text-[#a0a0a0] hover:text-red-400 transition-colors" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
@@ -372,7 +405,7 @@ export default function App() {
                     );
                   }
                   return (
-                    <div key={`dep-${dep.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group print-break-inside-avoid`}>
+                    <div key={`dep-${dep.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group`}>
                       <button onClick={() => removeDeposit(dep.id)} className="absolute top-6 right-6 text-[#e5e5e5] group-hover:text-red-400 transition-colors z-10 no-print" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
                       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 pr-8">
                         <h4 className="font-tenor text-2xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Банковский депозит</h4>
@@ -399,7 +432,7 @@ export default function App() {
 
                   if (stock.isEditing) {
                     return (
-                      <div key={`stock-${stock.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print print-break-inside-avoid">
+                      <div key={`stock-${stock.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print">
                         <div className="flex justify-between items-center mb-6">
                           <h4 className="font-tenor text-xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Параметры инвестиций в акции</h4>
                           <button onClick={() => removeStock(stock.id)} className="text-[#a0a0a0] hover:text-red-400 transition-colors" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
@@ -415,7 +448,7 @@ export default function App() {
                     );
                   }
                   return (
-                    <div key={`stock-${stock.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group print-break-inside-avoid`}>
+                    <div key={`stock-${stock.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group`}>
                       <button onClick={() => removeStock(stock.id)} className="absolute top-6 right-6 text-[#e5e5e5] group-hover:text-red-400 transition-colors z-10 no-print" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
                       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 pr-8">
                         <h4 className="font-tenor text-2xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Фондовый рынок</h4>
@@ -439,7 +472,7 @@ export default function App() {
 
                   if (asset.isEditing) {
                     return (
-                      <div key={`cash-${asset.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print print-break-inside-avoid">
+                      <div key={`cash-${asset.id}`} className="bg-[#fafafa] border border-[#e5e5e5] shadow-sm relative group p-6 md:p-8 no-print">
                         <div className="flex justify-between items-center mb-6">
                           <h4 className="font-tenor text-xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Настройка наличных</h4>
                           <button onClick={() => { setCash(null); setIsEditingCash(false); }} className="text-[#a0a0a0] hover:text-red-400 transition-colors" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
@@ -455,7 +488,7 @@ export default function App() {
                     );
                   }
                   return (
-                    <div key={`cash-${asset.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group print-break-inside-avoid`}>
+                    <div key={`cash-${asset.id}`} className={`${cStyles.cardBg} border ${cStyles.cardBorder} p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow duration-300 relative group`}>
                       <button onClick={() => setCash(null)} className="absolute top-6 right-6 text-[#e5e5e5] group-hover:text-red-400 transition-colors z-10 no-print" title="Удалить актив"><Trash2 className="w-5 h-5" /></button>
                       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 pr-8">
                         <h4 className="font-tenor text-2xl flex items-center"><Wallet className="w-5 h-5 mr-2 text-[#987362]" /> Наличные средства</h4>
@@ -474,7 +507,7 @@ export default function App() {
               })}
             </div>
 
-            <div className="bg-[#987362] p-8 md:p-10 shadow-sm relative overflow-hidden mt-10 print-break-inside-avoid">
+            <div className="bg-[#987362] p-8 md:p-10 shadow-sm relative overflow-hidden mt-10">
               <Scale className="absolute -right-10 -bottom-10 w-64 h-64 text-white opacity-5 pointer-events-none" />
               <div className="relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -498,7 +531,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="space-y-8 pt-8 print-break-inside-avoid">
+          <section className="space-y-8 pt-8">
             <div className="space-y-4 border-b border-[#e5e5e5] pb-4">
               <div className="flex items-center space-x-3">
                 <Calculator className="w-6 h-6 text-[#987362]" />
@@ -575,21 +608,28 @@ export default function App() {
             </div>
 
             <div className="mt-10 pt-10 border-t border-[#e5e5e5] flex justify-center no-print">
-              <button onClick={handlePrint} className="bg-white hover:bg-[#fafafa] text-[#222222] border border-[#e5e5e5] hover:border-[#987362] px-8 py-4 text-sm font-medium transition-all flex items-center space-x-2"><Download className="w-5 h-5 text-[#987362]" /><span>Скачать расчет в PDF</span></button>
+              <button 
+                onClick={handleDownloadPDF} 
+                disabled={isDownloading}
+                className="bg-white hover:bg-[#fafafa] text-[#222222] border border-[#e5e5e5] hover:border-[#987362] px-8 py-4 text-sm font-medium transition-all flex items-center space-x-2 disabled:opacity-50"
+              >
+                <Download className="w-5 h-5 text-[#987362]" />
+                <span>{isDownloading ? 'Формирование PDF...' : 'Скачать расчет в PDF'}</span>
+              </button>
             </div>
           </section>
 
-          <div className="bg-[#1c1c1c] p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 w-full print-break-inside-avoid">
+          <div className="bg-[#1c1c1c] p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 w-full no-print">
             <div className="space-y-2">
               <p className="text-xl md:text-3xl font-tenor text-white tracking-tight leading-snug">Калькулятор показывает потенциал</p>
               <p className="text-[#a0a0a0] text-sm md:text-xl font-light">Консультация превращает его в стратегию</p>
             </div>
-            <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto justify-center bg-[#987362] hover:bg-[#826152] text-white px-6 py-4 text-sm md:text-base font-medium transition-colors flex items-center space-x-2 no-print"><span className="text-center">Записаться на разбор</span><ArrowRight className="w-5 h-5 flex-shrink-0" /></button>
+            <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto justify-center bg-[#987362] hover:bg-[#826152] text-white px-6 py-4 text-sm md:text-base font-medium transition-colors flex items-center space-x-2"><span className="text-center">Записаться на разбор</span><ArrowRight className="w-5 h-5 flex-shrink-0" /></button>
           </div>
 
           <Showcase formatMoney={formatMoney} />
 
-          <footer className="pt-16 pb-8 border-t border-[#e5e5e5] mt-16 text-center md:text-left print-break-inside-avoid">
+          <footer className="pt-16 pb-8 border-t border-[#e5e5e5] mt-16 text-center md:text-left">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-[#666666]">
                <div className="space-y-2 flex flex-col items-center md:items-start">
                  <p className="font-medium text-[#222222]">ИП Соболева Виктория Викторовна</p>
@@ -609,7 +649,6 @@ export default function App() {
                </div>
             </div>
           </footer>
-
         </div>
       </div>
       
