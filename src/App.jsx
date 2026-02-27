@@ -5,7 +5,10 @@ import {
 } from 'lucide-react';
 
 import { CURRENT_YEAR, constants } from './config/data';
-import { getYearWord, getAlertStyles } from './utils/helpers';
+import { 
+  getYearWord, getAlertStyles, getRealEstateAudit, 
+  getDepositAudit, getStockAudit, getCashAudit 
+} from './utils/helpers';
 import { Showcase } from './components/Showcase';
 import { ChartSection } from './components/ChartSection';
 import { LeadModal } from './components/LeadModal';
