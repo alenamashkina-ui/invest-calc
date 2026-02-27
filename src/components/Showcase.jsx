@@ -13,7 +13,8 @@ export const Showcase = () => {
       schedule: "1 928 ₽/мес до фев 2027, 28 243 ₽/мес до фев 2028. Далее переход на станд. ставку, рефинансируемся",
       growth: "+55%",
       profit: "~7 500 000 ₽",
-      image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=800"
+      // Ссылка на фото СПб
+      image: "https://optim.tildacdn.com/tild3766-3436-4362-b365-363963643036/-/format/webp/IMG_3601.PNG.webp"
     },
     {
       id: 2,
@@ -25,7 +26,8 @@ export const Showcase = () => {
       schedule: "Платеж 123 484 ₽/мес на 7 лет. Далее переход на станд. ставку, рефинансируемся",
       growth: "+49%",
       profit: "~13 000 000 ₽",
-      image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800"
+      // Ссылка на фото Москва
+      image: "https://optim.tildacdn.com/tild6662-3261-4464-a139-303133346563/-/format/webp/IMG_3602.PNG.webp"
     },
     {
       id: 3,
@@ -37,7 +39,8 @@ export const Showcase = () => {
       schedule: "187 120 ₽ в мес. на 24 мес. На 25 мес. остаток или переход на ипотеку",
       growth: "+50%",
       profit: "~4 500 000 ₽",
-      image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800"
+      // Ссылка на фото Калининград
+      image: "https://optim.tildacdn.com/tild3131-6363-4430-a262-343464326638/-/format/webp/IMG_3603.PNG.webp"
     }
   ];
 
